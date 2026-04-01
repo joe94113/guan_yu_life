@@ -276,6 +276,7 @@ const viewedSlideIds = ref<Set<string>>(new Set());
 const dailyDrawnSlideId = ref<string | null>(null);
 const lastDrawDate = ref<string | null>(null);
 const isStoryExpanded = ref(false);
+const isAchievementsPanelExpanded = ref(false);
 
 let autoPlayTimer: number | null = null;
 let subtitleTimer: number | null = null;
@@ -607,26 +608,38 @@ onBeforeUnmount(() => {
                 </div>
             </header>
 
-            <div class="achievement-strip">
-                <div
-                    class="achievement-item"
-                    :class="{ 'achievement-item--unlocked': viewedCount > 0 }"
+            <div class="achievement-strip" :class="{ 'achievement-strip--expanded': isAchievementsPanelExpanded }">
+                <button 
+                    class="achievement-toggle-btn"
+                    type="button"
+                    @click="isAchievementsPanelExpanded = !isAchievementsPanelExpanded"
+                    :aria-expanded="isAchievementsPanelExpanded"
                 >
-                    <div class="achievement-badge">🔍</div>
-                    <div class="achievement-info">
-                        <p class="achievement-name">探險家</p>
-                        <p class="achievement-desc">
-                            看過 {{ viewedCount }}/{{ slides.length }} 張回憶
-                        </p>
+                    <span class="achievement-toggle-icon">{{ isAchievementsPanelExpanded ? '▼' : '▶' }}</span>
+                    <span class="achievement-toggle-text">成就系統</span>
+                    <span class="achievement-progress">{{ viewedCount }}/{{ slides.length }}</span>
+                </button>
+                <div class="achievement-content" v-show="isAchievementsPanelExpanded">
+                    <div
+                        class="achievement-item"
+                        :class="{ 'achievement-item--unlocked': viewedCount > 0 }"
+                    >
+                        <div class="achievement-badge">🔍</div>
+                        <div class="achievement-info">
+                            <p class="achievement-name">探險家</p>
+                            <p class="achievement-desc">
+                                看過 {{ viewedCount }}/{{ slides.length }} 張回憶
+                            </p>
+                        </div>
                     </div>
-                </div>
-                <div class="achievement-item" :class="{ 'achievement-item--unlocked': allViewed }">
-                    <div class="achievement-badge">✨</div>
-                    <div class="achievement-info">
-                        <p class="achievement-name">人生回顧家</p>
-                        <p class="achievement-desc">
-                            {{ allViewed ? "已解鎖！" : "集滿所有回憶" }}
-                        </p>
+                    <div class="achievement-item" :class="{ 'achievement-item--unlocked': allViewed }">
+                        <div class="achievement-badge">✨</div>
+                        <div class="achievement-info">
+                            <p class="achievement-name">人生回顧家</p>
+                            <p class="achievement-desc">
+                                {{ allViewed ? "已解鎖！" : "集滿所有回憶" }}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -821,9 +834,9 @@ onBeforeUnmount(() => {
     background:
         radial-gradient(circle at 20% 30%, rgb(90 169 255 / 30%), transparent 40%),
         radial-gradient(circle at 80% 70%, rgb(255 178 94 / 20%), transparent 36%);
-    animation: drift 24s ease-in-out infinite alternate;
     z-index: 0;
-    will-change: transform;
+    will-change: auto;
+    pointer-events: none;
 }
 
 .game-arena {
@@ -873,9 +886,73 @@ onBeforeUnmount(() => {
 }
 
 .achievement-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    border-radius: 10px;
+    background: rgb(255 255 255 / 6%);
+    border: 1px solid rgb(255 255 255 / 12%);
+    overflow: hidden;
+    transition: background-color 0.3s ease;
+}
+
+.achievement-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 0.8rem;
+    border: none;
+    background: transparent;
+    color: rgb(233 242 255 / 88%);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+    transition: background-color 0.3s ease;
+    user-select: none;
+}
+
+.achievement-toggle-btn:hover {
+    background: rgb(255 255 255 / 8%);
+}
+
+.achievement-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    font-size: 0.75rem;
+    transition: transform 0.3s ease;
+}
+
+.achievement-toggle-text {
+    flex: 1;
+}
+
+.achievement-progress {
+    font-size: 0.8rem;
+    color: rgb(233 242 255 / 65%);
+    background: rgb(100 210 255 / 20%);
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+}
+
+.achievement-content {
     display: grid;
     gap: 0.6rem;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    padding: 0 0.8rem 0.8rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .achievement-item {
@@ -1030,6 +1107,8 @@ onBeforeUnmount(() => {
     border: 1px solid rgb(255 255 255 / 16%);
     border-radius: 16px;
     padding: 0.6rem;
+    contain: layout style paint;
+    will-change: auto;
 }
 
 .photo-card__image {
@@ -1038,7 +1117,9 @@ onBeforeUnmount(() => {
     aspect-ratio: 4 / 5;
     object-fit: contain;
     background: #070b1a;
-    pointer-events: none;
+    user-select: none;
+    touch-action: manipulation;
+    -webkit-user-select: none;
 }
 
 .photo-card__caption {
@@ -1279,13 +1360,13 @@ onBeforeUnmount(() => {
     background: rgb(11 16 35 / 70%);
     border: 1px solid rgb(100 210 255 / 40%);
     border-radius: 14px;
-    padding: 0.75rem 0.95rem;
+    padding: 0.65rem 0.85rem;
     backdrop-filter: blur(8px);
 }
 
 .daily-task__title {
-    margin: 0 0 0.6rem;
-    font-size: 0.92rem;
+    margin: 0 0 0.5rem;
+    font-size: 0.88rem;
     font-weight: 700;
     color: #64d2ff;
     letter-spacing: 0.05em;
@@ -1294,8 +1375,8 @@ onBeforeUnmount(() => {
 .daily-task__item {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.5rem 0.65rem;
+    gap: 0.5rem;
+    padding: 0.45rem 0.55rem;
     border-radius: 8px;
     background: rgb(100 210 255 / 12%);
     border: 1px solid rgb(100 210 255 / 30%);
@@ -1307,30 +1388,31 @@ onBeforeUnmount(() => {
 }
 
 .daily-task__emoji {
-    font-size: 1.3rem;
-    min-width: 30px;
+    font-size: 1.2rem;
+    min-width: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .daily-task__text {
-    font-size: 0.88rem;
+    font-size: 0.82rem;
     color: rgb(233 242 255 / 88%);
-    line-height: 1.4;
+    line-height: 1.3;
 }
 
 .stage-completion-panel {
     background: rgb(11 16 35 / 70%);
     border: 1px solid rgb(255 208 143 / 40%);
     border-radius: 14px;
-    padding: 0.75rem 0.95rem;
+    padding: 0.65rem 0.85rem;
     backdrop-filter: blur(8px);
 }
 
 .stage-completion__title {
-    margin: 0 0 0.6rem;
-    font-size: 0.92rem;
+    margin: 0 0 0.5rem;
+    font-size: 0.88rem;
     font-weight: 700;
     color: #ffd08f;
     letter-spacing: 0.05em;
@@ -1338,8 +1420,8 @@ onBeforeUnmount(() => {
 
 .stage-completion__list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.4rem;
 }
 
 .stage-item {
@@ -1396,14 +1478,16 @@ onBeforeUnmount(() => {
     position: relative;
     z-index: 6;
     width: min(100%, 980px);
-    max-height: min(34vh, 300px);
+    max-height: min(50vh, 500px);
     margin: 0 auto;
-    overflow: hidden;
     border-radius: 18px;
     padding: 0.75rem;
     background: rgb(7 10 22 / 66%);
     border: 1px solid rgb(255 231 196 / 24%);
     backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .discussion-panel__head {
@@ -1424,8 +1508,11 @@ onBeforeUnmount(() => {
 
 .discussion-panel__content {
     border-radius: 12px;
-    overflow: hidden;
+    overflow: auto;
     background: rgb(5 8 17 / 36%);
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
 }
 
 @keyframes drift {
@@ -1445,7 +1532,7 @@ onBeforeUnmount(() => {
 
     .discussion-panel {
         width: 100%;
-        max-height: 30vh;
+        max-height: 50vh;
     }
 
     .stage-completion__list {
@@ -1460,14 +1547,14 @@ onBeforeUnmount(() => {
     }
 
     .discussion-panel {
-        max-height: 32vh;
+        max-height: 45vh;
     }
 
     .photo-card__image {
         aspect-ratio: 3 / 4;
     }
 
-    .achievement-strip {
+    .achievement-content {
         grid-template-columns: 1fr;
     }
 
