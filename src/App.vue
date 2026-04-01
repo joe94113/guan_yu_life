@@ -14,9 +14,9 @@ interface SlideItem {
 
 const giscusConfig = {
     repo: "joe94113/guan_yu_life",
-    repoId: "R_kgDOExampleRepoId",
+    repoId: "R_kgDOR2c0xg",
     category: "General",
-    categoryId: "DIC_kwDOExampleCategoryId",
+    categoryId: "DIC_kwDOR2c0xs4C5vh8",
 };
 
 const asset = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
