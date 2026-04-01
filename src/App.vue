@@ -1005,6 +1005,7 @@ onBeforeUnmount(() => {
 .photo-card__container {
     overflow: hidden;
     background: #070b1a;
+    touch-action: manipulation;
 }
 
 .photo-card__video {
@@ -1012,7 +1013,6 @@ onBeforeUnmount(() => {
     height: auto;
     aspect-ratio: 4 / 5;
     object-fit: cover !important;
-    pointer-events: none;
 }
 
 .photo-card__video::cue {
