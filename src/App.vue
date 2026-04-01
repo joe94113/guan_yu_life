@@ -800,7 +800,9 @@ onBeforeUnmount(() => {
     justify-content: flex-start;
     gap: 1rem;
     padding: 4.2rem 1rem 6rem;
-    color: #f7f3e8;
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .memory-page::after {
