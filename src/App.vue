@@ -19,6 +19,8 @@ const giscusConfig = {
     categoryId: "DIC_kwDOExampleCategoryId",
 };
 
+const asset = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
+
 const slides: SlideItem[] = [
     {
         id: "childhood-1",
@@ -26,7 +28,7 @@ const slides: SlideItem[] = [
         title: "在公園追風的下午",
         quote: "童年的快樂，常常只是被陽光照到。",
         story: "放學後最期待去公園溜滑梯，鞋子沾滿沙，回家還捨不得洗掉那天的快樂。",
-        image: "/assets/images/childhood/1.jpg",
+        image: asset("assets/images/childhood/1.jpg"),
     },
     {
         id: "childhood-2",
@@ -74,7 +76,7 @@ const slides: SlideItem[] = [
         title: "大學一 · 呆滯表情",
         quote: "那個放空瞬間，反而最像真實的我。",
         story: "把大學生活的疲憊與可愛都留在這張呆滯表情裡。",
-        image: "/assets/images/college/1.jpg",
+        image: asset("assets/images/college/1.jpg"),
     },
     {
         id: "college-2",
@@ -82,7 +84,7 @@ const slides: SlideItem[] = [
         title: "大學二 · 租屋處床上自拍",
         quote: "日常很普通，但每張都值得收藏。",
         story: "在租屋處床上拍下的自拍，是那段獨立生活最直接的紀錄。",
-        image: "/assets/images/college/2.jpg",
+        image: asset("assets/images/college/2.jpg"),
     },
     {
         id: "college-3",
@@ -90,7 +92,7 @@ const slides: SlideItem[] = [
         title: "大學三 · 租屋處床上睡著",
         quote: "努力到睡著，也是青春的一種證明。",
         story: "專題、報告、打工交錯的日子，最後倒在床上瞬間入睡。",
-        image: "/assets/images/college/3.jpg",
+        image: asset("assets/images/college/3.jpg"),
     },
     {
         id: "college-4",
@@ -98,7 +100,7 @@ const slides: SlideItem[] = [
         title: "大學四 · 帥氣釣魚照",
         quote: "課業之外，也要有讓自己發光的時刻。",
         story: "釣魚那天風很大，但拍下了最有型的一張。",
-        image: "/assets/images/college/4.jpg",
+        image: asset("assets/images/college/4.jpg"),
     },
     {
         id: "college-5",
@@ -106,7 +108,7 @@ const slides: SlideItem[] = [
         title: "大學五 · 與聖誕樹合照",
         quote: "每個節日，都有值得被記住的笑容。",
         story: "在學校聖誕樹旁留下合照，替那年冬天做了最暖的註解。",
-        image: "/assets/images/college/5.jpg",
+        image: asset("assets/images/college/5.jpg"),
     },
     {
         id: "college-6",
@@ -114,7 +116,7 @@ const slides: SlideItem[] = [
         title: "大學六 · 專題發表與燈泡",
         quote: "靈感真的會在壓力裡發亮。",
         story: "專題發表當天與燈泡合照，像是把一路上的想法正式點亮。",
-        image: "/assets/images/college/6.jpg",
+        image: asset("assets/images/college/6.jpg"),
     },
     {
         id: "college-7",
@@ -122,7 +124,7 @@ const slides: SlideItem[] = [
         title: "大學七 · 畢業旅行馬路比 YA",
         quote: "畢業不是結束，是更自由的開場。",
         story: "畢業旅行在馬路上被拍下比 YA 的瞬間，像在跟青春敬禮。",
-        image: "/assets/images/college/7.jpg",
+        image: asset("assets/images/college/7.jpg"),
     },
     {
         id: "work-1",
@@ -130,7 +132,7 @@ const slides: SlideItem[] = [
         title: "出社會一 · 露營手拿咖啡和車",
         quote: "長大後的自由，是自己安排的風景。",
         story: "露營時手拿咖啡和車子的合照，記錄工作之外喘口氣的時刻。",
-        image: "/assets/images/work/1.jpg",
+        image: asset("assets/images/work/1.jpg"),
     },
     {
         id: "work-2",
@@ -138,7 +140,7 @@ const slides: SlideItem[] = [
         title: "出社會二 · 露營太熱裸上半身睡覺",
         quote: "有時候最舒服的休息，就是完全放鬆。",
         story: "露營天氣太熱，在帳篷旁裸上半身睡著，留下很真實的一張。",
-        image: "/assets/images/work/2.jpg",
+        image: asset("assets/images/work/2.jpg"),
     },
     {
         id: "work-3",
@@ -146,7 +148,7 @@ const slides: SlideItem[] = [
         title: "出社會三 · 眼鏡趣味照",
         quote: "成熟裡也要留一點搞怪。",
         story: "用眼鏡玩出特別角度的趣味照片，幫忙碌生活加上一點幽默。",
-        image: "/assets/images/work/3.jpg",
+        image: asset("assets/images/work/3.jpg"),
     },
     {
         id: "ascension-1",
@@ -154,7 +156,7 @@ const slides: SlideItem[] = [
         title: "飛昇 · 下一章",
         quote: "過去都被好好收藏，未來正要開始。",
         story: "這一張代表新的篇章，把前面所有回憶都帶著一起前進。",
-        image: "/assets/images/ascension/1.jpg",
+        image: asset("assets/images/ascension/1.jpg"),
     },
 ];
 
