@@ -13,7 +13,7 @@ interface SlideItem {
 }
 
 const giscusConfig = {
-    repo: "joe094113/guan_yu_life",
+    repo: "joe94113/guan_yu_life",
     repoId: "R_kgDOExampleRepoId",
     category: "General",
     categoryId: "DIC_kwDOExampleCategoryId",
