@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 type LifeStage = "小孩時期" | "國中" | "高中" | "大學" | "出社會" | "飛昇";
 type Rarity = "常見" | "稀有" | "傳說";
@@ -277,6 +277,7 @@ const dailyDrawnSlideId = ref<string | null>(null);
 const lastDrawDate = ref<string | null>(null);
 const isStoryExpanded = ref(false);
 const isAchievementsPanelExpanded = ref(false);
+const photoZoneRef = ref<HTMLElement | null>(null);
 
 let autoPlayTimer: number | null = null;
 let subtitleTimer: number | null = null;
@@ -360,6 +361,14 @@ const prevSlide = (): void => {
     markCurrentAsViewed();
 };
 
+const focusPhotoZone = async (): Promise<void> => {
+    await nextTick();
+    photoZoneRef.value?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+    });
+};
+
 const randomSlide = (): void => {
     if (slides.length <= 1) {
         return;
@@ -384,6 +393,8 @@ const randomSlide = (): void => {
             date: lastDrawDate.value,
         }),
     );
+
+    void focusPhotoZone();
 };
 
 const markCurrentAsViewed = (): void => {
@@ -708,7 +719,7 @@ onBeforeUnmount(() => {
                 </div>
             </div>
 
-            <div class="game-photo-zone" aria-live="polite">
+            <div ref="photoZoneRef" class="game-photo-zone" aria-live="polite">
                 <div class="photo-controls-hint">
                     <span class="hint-item">⌨️ <kbd>←</kbd> 上一張</span>
                     <span class="hint-divider">|</span>
