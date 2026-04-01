@@ -286,6 +286,8 @@ let oscillatorA: OscillatorNode | null = null;
 let oscillatorB: OscillatorNode | null = null;
 let lfo: OscillatorNode | null = null;
 let lfoGain: GainNode | null = null;
+let touchStartX = 0;
+let touchStartY = 0;
 
 const activeSlide = computed<SlideItem>(() => slides[activeIndex.value] ?? fallbackSlide);
 const activeStage = computed(() => activeSlide.value.stage);
@@ -473,6 +475,28 @@ const handleKeyNavigation = (event: KeyboardEvent): void => {
     }
 };
 
+const handleTouchStart = (event: TouchEvent): void => {
+    touchStartX = event.touches[0]?.clientX ?? 0;
+    touchStartY = event.touches[0]?.clientY ?? 0;
+};
+
+const handleTouchEnd = (event: TouchEvent): void => {
+    const touchEndX = event.changedTouches[0]?.clientX ?? 0;
+    const touchEndY = event.changedTouches[0]?.clientY ?? 0;
+    
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    
+    // 只在水平距離大於豎直距離時觸發左右導航
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        if (deltaX > 0) {
+            prevSlide();
+        } else {
+            nextSlide();
+        }
+    }
+};
+
 const mountGiscus = (): void => {
     const container = document.querySelector("#giscus-host");
     if (!(container instanceof HTMLElement)) {
@@ -564,6 +588,8 @@ onMounted(async () => {
     showChapterSubtitle();
     await createAmbientAudio();
     window.addEventListener("keydown", handleKeyNavigation);
+    document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    document.addEventListener("touchend", handleTouchEnd, { passive: true });
     mountGiscus();
 });
 
@@ -575,6 +601,8 @@ watch(activeIndex, () => {
 onBeforeUnmount(() => {
     stopAutoPlay();
     window.removeEventListener("keydown", handleKeyNavigation);
+    document.removeEventListener("touchstart", handleTouchStart);
+    document.removeEventListener("touchend", handleTouchEnd);
     if (subtitleTimer !== null) {
         window.clearTimeout(subtitleTimer);
         subtitleTimer = null;
@@ -681,6 +709,13 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="game-photo-zone" aria-live="polite">
+                <div class="photo-controls-hint">
+                    <span class="hint-item">⌨️ <kbd>←</kbd> 上一張</span>
+                    <span class="hint-divider">|</span>
+                    <span class="hint-item"><kbd>→</kbd> 下一張</span>
+                    <span class="hint-divider">|</span>
+                    <span class="hint-item">👆 左右滑動</span>
+                </div>
                 <transition name="photo-pop" mode="out-in">
                     <figure
                         :key="activeSlide.id"
@@ -1109,6 +1144,58 @@ onBeforeUnmount(() => {
     padding: 0.6rem;
     contain: layout style paint;
     will-change: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.photo-controls-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    background: rgb(100 210 255 / 8%);
+    border: 1px solid rgb(100 210 255 / 25%);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: rgb(100 210 255 / 85%);
+    flex-wrap: wrap;
+}
+
+.hint-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+.hint-item kbd {
+    background: rgb(100 210 255 / 20%);
+    border: 1px solid rgb(100 210 255 / 40%);
+    border-radius: 4px;
+    padding: 0.2rem 0.4rem;
+    font-family: monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.hint-divider {
+    color: rgb(100 210 255 / 40%);
+    margin: 0 0.2rem;
+}
+
+@media (max-width: 560px) {
+    .photo-controls-hint {
+        font-size: 0.75rem;
+        gap: 0.3rem;
+        padding: 0.35rem 0.5rem;
+    }
+
+    .hint-item kbd {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.7rem;
+    }
 }
 
 .photo-card__image {
