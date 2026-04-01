@@ -1012,6 +1012,7 @@ onBeforeUnmount(() => {
     height: auto;
     aspect-ratio: 4 / 5;
     object-fit: cover !important;
+    pointer-events: none;
 }
 
 .photo-card__video::cue {
@@ -1037,6 +1038,7 @@ onBeforeUnmount(() => {
     aspect-ratio: 4 / 5;
     object-fit: contain;
     background: #070b1a;
+    pointer-events: none;
 }
 
 .photo-card__caption {
@@ -1396,7 +1398,7 @@ onBeforeUnmount(() => {
     width: min(100%, 980px);
     max-height: min(34vh, 300px);
     margin: 0 auto;
-    overflow: auto;
+    overflow: hidden;
     border-radius: 18px;
     padding: 0.75rem;
     background: rgb(7 10 22 / 66%);
