@@ -801,8 +801,6 @@ onBeforeUnmount(() => {
     gap: 1rem;
     padding: 4.2rem 1rem 6rem;
     touch-action: pan-y;
-    -webkit-user-select: none;
-    user-select: none;
 }
 
 .memory-page::after {
