@@ -168,7 +168,7 @@ const slides: SlideItem[] = [
         title: "炒菜英姿",
         quote: "在家族便當店裡，揮灑青春的汗水。",
         story: "家裡開便當店，在廚房裡學會了各種炒菜秘訣，拍下在灶火前專注炒菜的樣子，那時候覺得自己超帥。",
-        image: asset("assets/videos/college/bento-work.mp4"),
+        image: asset("assets/videos/college/bento-work .mp4"),
         rarity: "稀有",
         mediaType: "video",
     },
