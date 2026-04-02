@@ -828,20 +828,20 @@ onBeforeUnmount(() => {
                         />
                         <video
                             v-else
-                            :src="activeSlide.image"
-                            type="video/mp4"
                             class="photo-card__image photo-card__video"
                             :aria-label="`影片：${activeSlide.title}`"
                             :aria-describedby="`photo-caption-${activeSlide.id}`"
                             :title="activeSlide.title"
                             preload="metadata"
                             playsinline
+                            webkit-playsinline="true"
                             controls
                             controlsList="nodownload"
                             @play="handleVideoPlay"
                             @pause="handleVideoPause"
                             @ended="handleVideoPause"
                         >
+                            <source :src="activeSlide.image" type="video/mp4" />
                             <track
                                 v-if="activeSlide.captionTrack"
                                 kind="captions"
@@ -1347,12 +1347,12 @@ onBeforeUnmount(() => {
     aspect-ratio: auto;
     object-fit: contain !important;
     filter: none;
-    background: #f8fafc;
+    background: #000;
 }
 
 .photo-card__image.photo-card__video {
     filter: none;
-    background: #f8fafc;
+    background: #000;
 }
 
 .photo-card__video::cue {
@@ -1867,7 +1867,6 @@ onBeforeUnmount(() => {
 
     .photo-card__video {
         background: #020617;
-        filter: saturate(1.14) contrast(1.12) brightness(1.02);
         box-shadow: inset 0 0 0 1px rgb(148 163 184 / 18%);
     }
 
