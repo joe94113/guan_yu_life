@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
-type LifeStage = "小孩時期" | "國中" | "高中" | "大學" | "出社會" | "飛昇";
+type LifeStage = "小孩時期" | "大學" | "出社會" | "飛昇";
 type Rarity = "常見" | "稀有" | "傳說";
 type MediaType = "image" | "video";
 
@@ -14,6 +14,8 @@ interface SlideItem {
     image: string;
     rarity?: Rarity;
     mediaType?: MediaType;
+    captionTrack?: string;
+    descriptionTrack?: string;
 }
 
 const giscusConfig = {
@@ -23,7 +25,7 @@ const giscusConfig = {
     categoryId: "DIC_kwDOR2c0xs4C5vh8",
 };
 
-const asset = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
+const asset = (path: string): string => new URL(path, document.baseURI).toString();
 
 const slides: SlideItem[] = [
     {
@@ -34,51 +36,6 @@ const slides: SlideItem[] = [
         story: "放學後最期待去公園溜滑梯，鞋子沾滿沙，回家還捨不得洗掉那天的快樂。",
         image: asset("assets/images/childhood/1.jpg"),
         rarity: "常見",
-    },
-    {
-        id: "childhood-2",
-        stage: "小孩時期",
-        title: "全家福的餐桌笑聲",
-        quote: "長大後才懂，最珍貴的是有人等你吃飯。",
-        story: "每個週末全家一起吃飯，長輩的叮嚀和笑聲，慢慢成了我最穩定的安全感。",
-        image: "https://picsum.photos/id/1027/1600/1000",
-        rarity: "稀有",
-    },
-    {
-        id: "junior-1",
-        stage: "國中",
-        title: "第一次在講台上發光",
-        quote: "那時候我才知道，原來緊張也可以很勇敢。",
-        story: "班會報告前手心全是汗，但講完後全班鼓掌。那一刻把我從害怕拉向自信。",
-        image: "https://picsum.photos/id/1040/1600/1000",
-        rarity: "常見",
-    },
-    {
-        id: "junior-2",
-        stage: "國中",
-        title: "放學後的操場晚風",
-        quote: "追著夕陽跑的那段路，後來再也沒那麼長。",
-        story: "每天傍晚都在操場多留十分鐘，和朋友聊夢想、聊未來，聊著聊著就長大了。",
-        image: "https://picsum.photos/id/1025/1600/1000",
-        rarity: "常見",
-    },
-    {
-        id: "senior-1",
-        stage: "高中",
-        title: "夜讀與咖啡香",
-        quote: "日子很硬，但心越來越有方向。",
-        story: "考前一個月幾乎天天留校，和同學互相抽問，熬夜寫題目也不覺得孤單。",
-        image: "https://picsum.photos/id/1067/1600/1000",
-        rarity: "常見",
-    },
-    {
-        id: "senior-2",
-        stage: "高中",
-        title: "畢業前的最後一拍",
-        quote: "我們都笑著說再見，卻沒人真的準備好。",
-        story: "制服別上小卡，交換祝福。快門聲落下時，我們把青春封進了一張照片。",
-        image: "https://picsum.photos/id/1074/1600/1000",
-        rarity: "傳說",
     },
     {
         id: "college-1",
@@ -161,6 +118,8 @@ const slides: SlideItem[] = [
         image: asset("assets/videos/college/crab-sleep.mp4"),
         rarity: "傳說",
         mediaType: "video",
+        captionTrack: asset("assets/videos/college/crab-sleep-captions.vtt"),
+        descriptionTrack: asset("assets/videos/college/crab-sleep-descriptions.vtt"),
     },
     {
         id: "college-10",
@@ -235,6 +194,8 @@ const slides: SlideItem[] = [
         image: asset("assets/videos/work/karaoke.mp4"),
         rarity: "傳說",
         mediaType: "video",
+        captionTrack: asset("assets/videos/work/karaoke-captions.vtt"),
+        descriptionTrack: asset("assets/videos/work/karaoke-descriptions.vtt"),
     },
     {
         id: "ascension-1",
@@ -256,19 +217,17 @@ const fallbackSlide: SlideItem = {
     image: "https://picsum.photos/id/1015/1600/1000",
 };
 
-const stageOrder: LifeStage[] = ["小孩時期", "國中", "高中", "大學", "出社會", "飛昇"];
+const stageOrder: LifeStage[] = ["小孩時期", "大學", "出社會", "飛昇"];
 
 const stageFirstIndexMap: Record<LifeStage, number> = {
     小孩時期: slides.findIndex((slide) => slide.stage === "小孩時期"),
-    國中: slides.findIndex((slide) => slide.stage === "國中"),
-    高中: slides.findIndex((slide) => slide.stage === "高中"),
     大學: slides.findIndex((slide) => slide.stage === "大學"),
     出社會: slides.findIndex((slide) => slide.stage === "出社會"),
     飛昇: slides.findIndex((slide) => slide.stage === "飛昇"),
 };
 
 const activeIndex = ref(0);
-const isPlaying = ref(true);
+const isPlaying = ref(false);
 const isAutoPlay = ref(true);
 const subtitleVisible = ref(false);
 const chapterLabel = ref("小孩時期 · 序章");
@@ -276,11 +235,13 @@ const viewedSlideIds = ref<Set<string>>(new Set());
 const dailyDrawnSlideId = ref<string | null>(null);
 const lastDrawDate = ref<string | null>(null);
 const isStoryExpanded = ref(false);
-const isAchievementsPanelExpanded = ref(false);
 const photoZoneRef = ref<HTMLElement | null>(null);
+const photoTransitionName = ref("photo-swipe-left");
+const isVideoPlaying = ref(false);
 
-let autoPlayTimer: number | null = null;
-let subtitleTimer: number | null = null;
+let autoPlayTimer: ReturnType<typeof globalThis.setInterval> | null = null;
+let subtitleTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+let musicPlayer: HTMLAudioElement | null = null;
 let audioCtx: AudioContext | null = null;
 let gainNode: GainNode | null = null;
 let oscillatorA: OscillatorNode | null = null;
@@ -289,14 +250,23 @@ let lfo: OscillatorNode | null = null;
 let lfoGain: GainNode | null = null;
 let touchStartX = 0;
 let touchStartY = 0;
+let touchStartedOnInteractive = false;
 const preloadedMedia = new Set<string>();
 
 const activeSlide = computed<SlideItem>(() => slides[activeIndex.value] ?? fallbackSlide);
 const activeStage = computed(() => activeSlide.value.stage);
+const activeSlideNumber = computed(() => activeIndex.value + 1);
+const activeRarityLabel = computed(() => activeSlide.value.rarity || "常見");
+const curatorLabelsByStage: Record<LifeStage, { era: string; theme: string }> = {
+    小孩時期: { era: "童年檔案", theme: "溫度與陪伴" },
+    大學: { era: "青春檔案", theme: "探索與自我" },
+    出社會: { era: "現實檔案", theme: "節奏與選擇" },
+    飛昇: { era: "下一章", theme: "總結與啟程" },
+};
+const activeCuratorLabels = computed(() => curatorLabelsByStage[activeStage.value]);
 const progressPercent = computed(() => Math.round(((activeIndex.value + 1) / slides.length) * 100));
 const viewedCount = computed(() => viewedSlideIds.value.size);
 const isCurrentViewed = computed(() => viewedSlideIds.value.has(activeSlide.value.id));
-const allViewed = computed(() => viewedCount.value === slides.length);
 const rarityEmoji = computed(() => {
     const rarity = activeSlide.value.rarity;
     if (rarity === "傳說") return "✨";
@@ -306,8 +276,6 @@ const rarityEmoji = computed(() => {
 const stageViewedCounts = computed(() => {
     const counts: Record<LifeStage, number> = {
         小孩時期: 0,
-        國中: 0,
-        高中: 0,
         大學: 0,
         出社會: 0,
         飛昇: 0,
@@ -322,8 +290,6 @@ const stageViewedCounts = computed(() => {
 const stageCompletions = computed(() => {
     const completions: Record<LifeStage, boolean> = {
         小孩時期: false,
-        國中: false,
-        高中: false,
         大學: false,
         出社會: false,
         飛昇: false,
@@ -337,6 +303,20 @@ const stageCompletions = computed(() => {
 });
 const totalStagesCompleted = computed(
     () => Object.values(stageCompletions.value).filter(Boolean).length,
+);
+const stageCards = computed(() =>
+    stageOrder.map((stage) => {
+        const total = slides.filter((slide) => slide.stage === stage).length;
+        const viewed = stageViewedCounts.value[stage];
+
+        return {
+            stage,
+            total,
+            viewed,
+            completed: stageCompletions.value[stage],
+            percent: total > 0 ? Math.round((viewed / total) * 100) : 0,
+        };
+    }),
 );
 const isTodayDrawn = computed(() => {
     if (!lastDrawDate.value) {
@@ -353,11 +333,13 @@ const todayDrawnSlide = computed<SlideItem | null>(() => {
 });
 
 const nextSlide = (): void => {
+    photoTransitionName.value = "photo-swipe-left";
     activeIndex.value = (activeIndex.value + 1) % slides.length;
     markCurrentAsViewed();
 };
 
 const prevSlide = (): void => {
+    photoTransitionName.value = "photo-swipe-right";
     activeIndex.value = (activeIndex.value - 1 + slides.length) % slides.length;
     markCurrentAsViewed();
 };
@@ -405,6 +387,8 @@ const randomSlide = (): void => {
     if (slides.length <= 1) {
         return;
     }
+
+    photoTransitionName.value = "photo-swipe-up";
 
     const current = activeIndex.value;
     let next = current;
@@ -471,11 +455,11 @@ const clearHistory = (): void => {
 
 const startAutoPlay = (): void => {
     if (autoPlayTimer !== null) {
-        window.clearInterval(autoPlayTimer);
+        globalThis.clearInterval(autoPlayTimer);
     }
 
-    autoPlayTimer = window.setInterval(() => {
-        if (isAutoPlay.value) {
+    autoPlayTimer = globalThis.setInterval(() => {
+        if (isAutoPlay.value && !isVideoPlaying.value) {
             nextSlide();
         }
     }, 6200);
@@ -483,14 +467,14 @@ const startAutoPlay = (): void => {
 
 const stopAutoPlay = (): void => {
     if (autoPlayTimer !== null) {
-        window.clearInterval(autoPlayTimer);
+        globalThis.clearInterval(autoPlayTimer);
         autoPlayTimer = null;
     }
 };
 
 const jumpToStage = (stage: LifeStage): void => {
     const nextIndex = stageFirstIndexMap[stage];
-    activeIndex.value = nextIndex >= 0 ? nextIndex : 0;
+    activeIndex.value = Math.max(nextIndex, 0);
 };
 
 const showChapterSubtitle = (): void => {
@@ -499,15 +483,25 @@ const showChapterSubtitle = (): void => {
     subtitleVisible.value = true;
 
     if (subtitleTimer !== null) {
-        window.clearTimeout(subtitleTimer);
+        globalThis.clearTimeout(subtitleTimer);
     }
 
-    subtitleTimer = window.setTimeout(() => {
+    subtitleTimer = globalThis.setTimeout(() => {
         subtitleVisible.value = false;
     }, 2200);
 };
 
 const handleKeyNavigation = (event: KeyboardEvent): void => {
+    const activeEl = document.activeElement;
+    if (
+        activeEl instanceof HTMLInputElement ||
+        activeEl instanceof HTMLTextAreaElement ||
+        activeEl instanceof HTMLSelectElement ||
+        activeEl instanceof HTMLVideoElement
+    ) {
+        return;
+    }
+
     if (event.key === "ArrowRight") {
         nextSlide();
         return;
@@ -518,18 +512,40 @@ const handleKeyNavigation = (event: KeyboardEvent): void => {
     }
 };
 
+const isInteractiveTouchTarget = (target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) {
+        return false;
+    }
+
+    return Boolean(
+        target.closest(
+            "video, button, a, input, textarea, select, [role='button'], .discussion-panel__content",
+        ),
+    );
+};
+
 const handleTouchStart = (event: TouchEvent): void => {
+    touchStartedOnInteractive = isInteractiveTouchTarget(event.target);
+    if (touchStartedOnInteractive) {
+        return;
+    }
+
     touchStartX = event.touches[0]?.clientX ?? 0;
     touchStartY = event.touches[0]?.clientY ?? 0;
 };
 
 const handleTouchEnd = (event: TouchEvent): void => {
+    if (touchStartedOnInteractive || isInteractiveTouchTarget(event.target)) {
+        touchStartedOnInteractive = false;
+        return;
+    }
+
     const touchEndX = event.changedTouches[0]?.clientX ?? 0;
     const touchEndY = event.changedTouches[0]?.clientY ?? 0;
-    
+
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
-    
+
     // 只在水平距離大於豎直距離時觸發左右導航
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
         if (deltaX > 0) {
@@ -538,6 +554,16 @@ const handleTouchEnd = (event: TouchEvent): void => {
             nextSlide();
         }
     }
+
+    touchStartedOnInteractive = false;
+};
+
+const handleVideoPlay = (): void => {
+    isVideoPlaying.value = true;
+};
+
+const handleVideoPause = (): void => {
+    isVideoPlaying.value = false;
 };
 
 const mountGiscus = (): void => {
@@ -552,64 +578,43 @@ const mountGiscus = (): void => {
     script.async = true;
     script.crossOrigin = "anonymous";
 
-    script.setAttribute("data-repo", giscusConfig.repo);
-    script.setAttribute("data-repo-id", giscusConfig.repoId);
-    script.setAttribute("data-category", giscusConfig.category);
-    script.setAttribute("data-category-id", giscusConfig.categoryId);
-    script.setAttribute("data-mapping", "pathname");
-    script.setAttribute("data-strict", "0");
-    script.setAttribute("data-reactions-enabled", "1");
-    script.setAttribute("data-emit-metadata", "0");
-    script.setAttribute("data-input-position", "top");
-    script.setAttribute("data-theme", "transparent_dark");
-    script.setAttribute("data-lang", "zh-TW");
+    Object.assign(script.dataset, {
+        repo: giscusConfig.repo,
+        repoId: giscusConfig.repoId,
+        category: giscusConfig.category,
+        categoryId: giscusConfig.categoryId,
+        mapping: "pathname",
+        strict: "0",
+        reactionsEnabled: "1",
+        emitMetadata: "0",
+        inputPosition: "top",
+        theme: "transparent_dark",
+        lang: "zh-TW",
+    });
 
     container.appendChild(script);
 };
 
 const createAmbientAudio = async (): Promise<void> => {
-    if (audioCtx !== null) {
-        await audioCtx.resume();
+    if (musicPlayer !== null) {
+        await musicPlayer.play();
         return;
     }
 
-    audioCtx = new window.AudioContext();
-    gainNode = audioCtx.createGain();
-    gainNode.gain.value = 0.045;
-
-    oscillatorA = audioCtx.createOscillator();
-    oscillatorA.type = "sine";
-    oscillatorA.frequency.value = 220;
-
-    oscillatorB = audioCtx.createOscillator();
-    oscillatorB.type = "triangle";
-    oscillatorB.frequency.value = 329.63;
-
-    lfo = audioCtx.createOscillator();
-    lfo.type = "sine";
-    lfo.frequency.value = 0.08;
-
-    lfoGain = audioCtx.createGain();
-    lfoGain.gain.value = 12;
-
-    lfo.connect(lfoGain);
-    lfoGain.connect(oscillatorA.frequency);
-
-    oscillatorA.connect(gainNode);
-    oscillatorB.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-
-    oscillatorA.start();
-    oscillatorB.start();
-    lfo.start();
+    musicPlayer = new Audio(asset("assets/music/guan_yu_song.m4a"));
+    musicPlayer.loop = true;
+    musicPlayer.preload = "auto";
+    musicPlayer.volume = 0.42;
+    await musicPlayer.play();
 };
 
 const stopAmbientAudio = async (): Promise<void> => {
-    if (audioCtx === null) {
+    if (musicPlayer === null) {
         return;
     }
 
-    await audioCtx.suspend();
+    musicPlayer.pause();
+    musicPlayer.currentTime = 0;
 };
 
 const toggleMusic = async (): Promise<void> => {
@@ -630,14 +635,14 @@ onMounted(async () => {
     preloadNearbySlides(activeIndex.value);
     startAutoPlay();
     showChapterSubtitle();
-    await createAmbientAudio();
-    window.addEventListener("keydown", handleKeyNavigation);
+    globalThis.addEventListener("keydown", handleKeyNavigation);
     document.addEventListener("touchstart", handleTouchStart, { passive: true });
     document.addEventListener("touchend", handleTouchEnd, { passive: true });
     mountGiscus();
 });
 
 watch(activeIndex, () => {
+    isVideoPlaying.value = false;
     showChapterSubtitle();
     isStoryExpanded.value = false;
     preloadNearbySlides(activeIndex.value);
@@ -645,16 +650,16 @@ watch(activeIndex, () => {
 
 onBeforeUnmount(() => {
     stopAutoPlay();
-    window.removeEventListener("keydown", handleKeyNavigation);
+    globalThis.removeEventListener("keydown", handleKeyNavigation);
     document.removeEventListener("touchstart", handleTouchStart);
     document.removeEventListener("touchend", handleTouchEnd);
     if (subtitleTimer !== null) {
-        window.clearTimeout(subtitleTimer);
+        globalThis.clearTimeout(subtitleTimer);
         subtitleTimer = null;
     }
-    if (audioCtx !== null) {
-        audioCtx.close();
-        audioCtx = null;
+    if (musicPlayer !== null) {
+        musicPlayer.pause();
+        musicPlayer = null;
     }
 });
 </script>
@@ -662,6 +667,7 @@ onBeforeUnmount(() => {
 <template>
     <main class="memory-page" @mouseenter="isAutoPlay = false" @mouseleave="isAutoPlay = true">
         <div class="memory-page__bg-glow"></div>
+        <div class="memory-page__grain"></div>
 
         <transition name="chapter-subtitle">
             <div v-if="subtitleVisible" class="chapter-subtitle" aria-live="polite">
@@ -669,145 +675,63 @@ onBeforeUnmount(() => {
             </div>
         </transition>
 
-        <section class="game-arena">
-            <header class="game-hud">
-                <p class="game-hud__label">回憶探索進度</p>
-                <p class="game-hud__value">{{ progressPercent }}%</p>
-                <div class="game-hud__bar">
-                    <span
-                        class="game-hud__bar-fill"
-                        :style="{ width: `${progressPercent}%` }"
-                    ></span>
+        <section class="hero-card">
+            <p class="hero-card__eyebrow">人生回憶跑馬燈</p>
+            <h1 class="hero-card__title">把人生收藏成一本可以滑動翻閱的回憶誌</h1>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="hero-stat__label">目前章節</span>
+                    <strong class="hero-stat__value">{{ activeSlide.stage }}</strong>
                 </div>
-            </header>
-
-            <div class="achievement-strip" :class="{ 'achievement-strip--expanded': isAchievementsPanelExpanded }">
-                <button 
-                    class="achievement-toggle-btn"
-                    type="button"
-                    @click="isAchievementsPanelExpanded = !isAchievementsPanelExpanded"
-                    :aria-expanded="isAchievementsPanelExpanded"
-                >
-                    <span class="achievement-toggle-icon">{{ isAchievementsPanelExpanded ? '▼' : '▶' }}</span>
-                    <span class="achievement-toggle-text">成就系統</span>
-                    <span class="achievement-progress">{{ viewedCount }}/{{ slides.length }}</span>
+                <div class="hero-stat">
+                    <span class="hero-stat__label">回憶編號</span>
+                    <strong class="hero-stat__value"
+                        >{{ activeSlideNumber }} / {{ slides.length }}</strong
+                    >
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat__label">稀有度</span>
+                    <strong class="hero-stat__value">{{ activeRarityLabel }}</strong>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat__label">完成階段</span>
+                    <strong class="hero-stat__value">{{ totalStagesCompleted }}</strong>
+                </div>
+            </div>
+            <div class="hero-actions">
+                <button class="hero-action" type="button" @click="toggleMusic">
+                    {{ isPlaying ? "關閉背景音" : "播放背景音" }}
                 </button>
-                <div class="achievement-content" v-show="isAchievementsPanelExpanded">
-                    <div
-                        class="achievement-item"
-                        :class="{ 'achievement-item--unlocked': viewedCount > 0 }"
-                    >
-                        <div class="achievement-badge">🔍</div>
-                        <div class="achievement-info">
-                            <p class="achievement-name">探險家</p>
-                            <p class="achievement-desc">
-                                看過 {{ viewedCount }}/{{ slides.length }} 張回憶
-                            </p>
-                        </div>
-                    </div>
-                    <div class="achievement-item" :class="{ 'achievement-item--unlocked': allViewed }">
-                        <div class="achievement-badge">✨</div>
-                        <div class="achievement-info">
-                            <p class="achievement-name">人生回顧家</p>
-                            <p class="achievement-desc">
-                                {{ allViewed ? "已解鎖！" : "集滿所有回憶" }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                <button
+                    class="hero-action hero-action--secondary"
+                    type="button"
+                    @click="randomSlide"
+                >
+                    隨機抽卡
+                </button>
             </div>
+        </section>
 
-            <div class="daily-task-panel">
-                <div class="daily-task__title">📅 今日任務</div>
-                <div v-if="isTodayDrawn && todayDrawnSlide" class="daily-task__item">
-                    <span class="daily-task__emoji">{{ rarityEmoji }}</span>
-                    <span class="daily-task__text">
-                        已抽到 {{ todayDrawnSlide.stage }} 的「{{ todayDrawnSlide.title }}」
-                    </span>
+        <section class="shell-card shell-card--progress">
+            <div class="progress-head">
+                <div>
+                    <p class="section-kicker">回憶探索進度</p>
+                    <h2 class="section-title">
+                        目前已看見 {{ viewedCount }} / {{ slides.length }} 張
+                    </h2>
                 </div>
-                <div v-else class="daily-task__item daily-task__item--empty">
-                    <span class="daily-task__emoji">🎴</span>
-                    <span class="daily-task__text">今天還未抽卡，點擊隨機抽卡試試運氣！</span>
-                </div>
+                <span class="progress-pill">{{ progressPercent }}%</span>
             </div>
-
-            <div class="stage-completion-panel">
-                <div class="stage-completion__title">🏆 時期進度</div>
-                <div class="stage-completion__list">
-                    <div
-                        v-for="stage in stageOrder"
-                        :key="stage"
-                        class="stage-item"
-                        :class="{ 'stage-item--completed': stageCompletions[stage] }"
-                    >
-                        <span class="stage-item__star">
-                            {{ stageCompletions[stage] ? "✨" : "☆" }}
-                        </span>
-                        <span class="stage-item__name">{{ stage }}</span>
-                        <span class="stage-item__progress">
-                            {{ stageViewedCounts[stage] }}/{{
-                                slides.filter((s) => s.stage === stage).length
-                            }}
-                        </span>
-                    </div>
-                </div>
+            <div class="progress-bar" aria-hidden="true">
+                <span class="progress-bar__fill" :style="{ width: `${progressPercent}%` }"></span>
             </div>
+        </section>
 
-            <div ref="photoZoneRef" class="game-photo-zone" aria-live="polite">
-                <div class="photo-controls-hint">
-                    <span class="hint-item">⌨️ <kbd>←</kbd> 上一張</span>
-                    <span class="hint-divider">|</span>
-                    <span class="hint-item"><kbd>→</kbd> 下一張</span>
-                    <span class="hint-divider">|</span>
-                    <span class="hint-item">👆 左右滑動</span>
-                </div>
-                <transition name="photo-pop" mode="out-in">
-                    <figure
-                        :key="activeSlide.id"
-                        class="photo-card"
-                        :class="{
-                            'photo-card--rare': activeSlide.rarity === '稀有',
-                            'photo-card--legendary': activeSlide.rarity === '傳說',
-                        }"
-                    >
-                        <div class="photo-card__container">
-                            <img
-                                v-if="!activeSlide.mediaType || activeSlide.mediaType === 'image'"
-                                :src="activeSlide.image"
-                                :alt="activeSlide.title"
-                                class="photo-card__image"
-                                loading="eager"
-                                decoding="async"
-                                fetchpriority="high"
-                            />
-                            <video
-                                v-else
-                                :src="activeSlide.image"
-                                type="video/mp4"
-                                class="photo-card__image photo-card__video"
-                                preload="metadata"
-                                playsinline
-                                controls
-                                controlsList="nodownload"
-                            ></video>
-                        </div>
-                        <figcaption class="photo-card__caption">
-                            <span v-if="isCurrentViewed" class="photo-card__badge">✓</span>
-                            <span class="photo-card__rarity">{{
-                                activeSlide.rarity || "常見"
-                            }}</span>
-                            <span
-                                v-if="activeSlide.mediaType === 'video'"
-                                class="photo-card__media-type"
-                            >
-                                🎬
-                            </span>
-                            {{ activeSlide.stage }} · {{ activeIndex + 1 }} / {{ slides.length }}
-                        </figcaption>
-                    </figure>
-                </transition>
+        <section class="shell-card shell-card--timeline" aria-label="人生階段導覽">
+            <div class="section-head">
+                <p class="section-kicker">年代篩選</p>
+                <h2 class="section-title">像翻卡片一樣切換人生階段</h2>
             </div>
-
             <nav class="timeline" aria-label="人生階段導覽">
                 <button
                     v-for="stage in stageOrder"
@@ -819,51 +743,179 @@ onBeforeUnmount(() => {
                     {{ stage }}
                 </button>
             </nav>
+        </section>
 
-            <section
-                class="story-card"
-                aria-live="polite"
-                :class="{ 'story-card--expanded': isStoryExpanded }"
-                @click="isStoryExpanded = !isStoryExpanded"
-            >
-                <p class="story-card__stage">
-                    {{ activeSlide.stage }} · {{ activeIndex + 1 }} / {{ slides.length }}
-                </p>
-                <h1 class="story-card__title">{{ activeSlide.title }}</h1>
-                <blockquote class="story-card__quote">{{ activeSlide.quote }}</blockquote>
-                <transition name="story-expand">
-                    <p v-show="isStoryExpanded" class="story-card__text">{{ activeSlide.story }}</p>
-                </transition>
-                <div class="story-card__toggle">
-                    <span class="story-card__toggle-text">
-                        {{ isStoryExpanded ? "收起" : "展開故事" }}
-                    </span>
-                    <span class="story-card__toggle-icon">{{ isStoryExpanded ? "▲" : "▼" }}</span>
+        <section class="shell-card shell-card--story-grid">
+            <div class="insight-card insight-card--daily">
+                <div class="section-head section-head--compact">
+                    <p class="section-kicker">今日任務</p>
                 </div>
-            </section>
+                <div v-if="isTodayDrawn && todayDrawnSlide" class="daily-task__item">
+                    <span class="daily-task__emoji">{{ rarityEmoji }}</span>
+                    <span class="daily-task__text">
+                        已抽到 {{ todayDrawnSlide.stage }} 的「{{ todayDrawnSlide.title }}」
+                    </span>
+                </div>
+                <div v-else class="daily-task__item daily-task__item--empty">
+                    <span class="daily-task__emoji">🎴</span>
+                    <span class="daily-task__text">今天還未抽卡，點一下超級喜歡試試手氣。</span>
+                </div>
+            </div>
 
-            <div class="action-bar">
-                <button class="action-btn" type="button" @click="toggleMusic">
-                    {{ isPlaying ? "靜音背景音" : "播放背景音" }}
-                </button>
-                <button class="action-btn action-btn--ghost" type="button" @click="prevSlide">
-                    上一張
-                </button>
-                <button class="action-btn action-btn--ghost" type="button" @click="nextSlide">
-                    下一張
-                </button>
-                <button class="action-btn action-btn--random" type="button" @click="randomSlide">
-                    隨機抽卡
-                </button>
-                <button
-                    class="action-btn action-btn--ghost action-btn--small"
-                    type="button"
-                    @click="clearHistory"
-                >
-                    重置記錄
-                </button>
+            <div class="insight-card insight-card--stages">
+                <div class="section-head section-head--compact">
+                    <p class="section-kicker">配對進度</p>
+                </div>
+                <div class="stage-list">
+                    <div
+                        v-for="card in stageCards"
+                        :key="card.stage"
+                        class="stage-item"
+                        :class="{ 'stage-item--completed': card.completed }"
+                    >
+                        <span class="stage-item__star">{{ card.completed ? "✨" : "☆" }}</span>
+                        <span class="stage-item__name">{{ card.stage }}</span>
+                        <span class="stage-item__progress">{{ card.viewed }}/{{ card.total }}</span>
+                    </div>
+                </div>
             </div>
         </section>
+
+        <section ref="photoZoneRef" class="photo-stage" aria-live="polite">
+            <div class="photo-stage__head">
+                <div>
+                    <p class="section-kicker">個人卡片</p>
+                    <h2 class="section-title">{{ activeSlide.title }}</h2>
+                </div>
+                <div class="photo-stage__meta">
+                    <div class="photo-stage__curation">
+                        <span class="curation-chip">{{ activeCuratorLabels.era }}</span>
+                        <span class="curation-chip curation-chip--muted">
+                            {{ activeCuratorLabels.theme }}
+                        </span>
+                    </div>
+                    <span class="photo-stage__badge">{{ activeRarityLabel }}</span>
+                    <span v-if="isCurrentViewed" class="photo-stage__seen">已看過</span>
+                </div>
+            </div>
+
+            <div class="photo-controls-hint">
+                <span class="hint-item">👈 左滑略過</span>
+                <span class="hint-divider">•</span>
+                <span class="hint-item">👉 右滑喜歡</span>
+                <span class="hint-divider">•</span>
+                <span class="hint-item">✨ 上滑超級喜歡</span>
+            </div>
+
+            <transition :name="photoTransitionName" mode="out-in">
+                <figure
+                    :key="activeSlide.id"
+                    class="photo-card"
+                    :class="{
+                        'photo-card--rare': activeSlide.rarity === '稀有',
+                        'photo-card--legendary': activeSlide.rarity === '傳說',
+                    }"
+                >
+                    <div class="photo-card__container">
+                        <img
+                            v-if="!activeSlide.mediaType || activeSlide.mediaType === 'image'"
+                            :src="activeSlide.image"
+                            :alt="activeSlide.title"
+                            class="photo-card__image"
+                            loading="eager"
+                            decoding="async"
+                            fetchpriority="high"
+                        />
+                        <video
+                            v-else
+                            :src="activeSlide.image"
+                            type="video/mp4"
+                            class="photo-card__image photo-card__video"
+                            :aria-label="`影片：${activeSlide.title}`"
+                            :aria-describedby="`photo-caption-${activeSlide.id}`"
+                            :title="activeSlide.title"
+                            preload="metadata"
+                            playsinline
+                            controls
+                            controlsList="nodownload"
+                            @play="handleVideoPlay"
+                            @pause="handleVideoPause"
+                            @ended="handleVideoPause"
+                        >
+                            <track
+                                v-if="activeSlide.captionTrack"
+                                kind="captions"
+                                :src="activeSlide.captionTrack"
+                                srclang="zh"
+                                label="中文字幕"
+                                default
+                            />
+                            <track
+                                v-if="activeSlide.descriptionTrack"
+                                kind="descriptions"
+                                :src="activeSlide.descriptionTrack"
+                                srclang="zh"
+                                label="中文描述"
+                            />
+                        </video>
+                    </div>
+                    <figcaption :id="`photo-caption-${activeSlide.id}`" class="photo-card__caption">
+                        <span v-if="isCurrentViewed" class="photo-card__badge">✓</span>
+                        <span class="photo-card__rarity">{{ activeRarityLabel }}</span>
+                        <span
+                            v-if="activeSlide.mediaType === 'video'"
+                            class="photo-card__media-type"
+                        >
+                            🎬
+                        </span>
+                        {{ activeSlide.stage }} · {{ activeSlideNumber }} / {{ slides.length }}
+                    </figcaption>
+                </figure>
+            </transition>
+        </section>
+
+        <section
+            class="story-card"
+            aria-live="polite"
+            :class="{ 'story-card--expanded': isStoryExpanded }"
+            @click="isStoryExpanded = !isStoryExpanded"
+        >
+            <p class="story-card__stage">
+                {{ activeSlide.stage }} · {{ activeSlideNumber }} / {{ slides.length }}
+            </p>
+            <blockquote class="story-card__quote">{{ activeSlide.quote }}</blockquote>
+            <transition name="story-expand">
+                <p v-show="isStoryExpanded" class="story-card__text">{{ activeSlide.story }}</p>
+            </transition>
+            <div class="story-card__toggle">
+                <span class="story-card__toggle-text">
+                    {{ isStoryExpanded ? "收起簡介" : "展開簡介" }}
+                </span>
+                <span class="story-card__toggle-icon">{{ isStoryExpanded ? "▲" : "▼" }}</span>
+            </div>
+        </section>
+
+        <div class="action-bar">
+            <button class="action-btn action-btn--pass" type="button" @click="prevSlide">
+                略過
+            </button>
+            <button class="action-btn action-btn--like" type="button" @click="nextSlide">
+                喜歡
+            </button>
+            <button class="action-btn action-btn--superlike" type="button" @click="randomSlide">
+                超級喜歡
+            </button>
+            <button class="action-btn action-btn--ghost" type="button" @click="toggleMusic">
+                {{ isPlaying ? "關閉音樂" : "播放音樂" }}
+            </button>
+            <button
+                class="action-btn action-btn--ghost action-btn--small"
+                type="button"
+                @click="clearHistory"
+            >
+                重置記錄
+            </button>
+        </div>
 
         <section class="discussion-panel" aria-label="留言區">
             <div class="discussion-panel__head">
@@ -880,282 +932,420 @@ onBeforeUnmount(() => {
     box-sizing: border-box;
 }
 
+:global(html) {
+    overflow-x: hidden;
+}
+
 :global(body) {
     margin: 0;
     min-height: 100vh;
-    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-    background: #0e1324;
+    overflow-x: hidden;
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background:
+        radial-gradient(circle at 12% 0%, rgb(230 237 244 / 65%), transparent 34%),
+        radial-gradient(circle at 100% 0%, rgb(224 232 241 / 52%), transparent 30%),
+        linear-gradient(180deg, #f8fafc 0%, #f1f5f9 46%, #e8edf3 100%);
+    color: #1f2937;
 }
 
 .memory-page {
     position: relative;
+    isolation: isolate;
+    width: min(100%, 100vw);
     min-height: 100vh;
     overflow-x: hidden;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
+    display: grid;
     gap: 1rem;
-    padding: 4.2rem 1rem 6rem;
+    padding: 1rem clamp(0.72rem, 3vw, 1rem) calc(7.6rem + env(safe-area-inset-bottom));
+    align-content: start;
     touch-action: pan-y;
 }
 
-.memory-page::after {
+.memory-page::after,
+.memory-page__grain {
     content: "";
     position: absolute;
     inset: 0;
+    pointer-events: none;
+}
+
+.memory-page::after {
     background:
-        radial-gradient(circle at 15% 8%, rgb(77 155 255 / 35%), transparent 40%),
-        radial-gradient(circle at 85% 14%, rgb(255 182 89 / 26%), transparent 32%),
-        linear-gradient(180deg, rgb(15 20 40 / 74%), rgb(9 12 25 / 88%));
+        radial-gradient(circle at 22% 8%, rgb(185 206 224 / 20%), transparent 36%),
+        radial-gradient(circle at 88% 12%, rgb(193 211 227 / 18%), transparent 32%),
+        linear-gradient(180deg, rgb(255 255 255 / 42%), rgb(148 163 184 / 10%));
     pointer-events: none;
     z-index: 1;
 }
 
 .memory-page__bg-glow {
     position: absolute;
-    inset: -15%;
+    inset: -12%;
     background:
-        radial-gradient(circle at 20% 30%, rgb(90 169 255 / 30%), transparent 40%),
-        radial-gradient(circle at 80% 70%, rgb(255 178 94 / 20%), transparent 36%);
+        radial-gradient(circle at 18% 24%, rgb(220 230 242 / 18%), transparent 34%),
+        radial-gradient(circle at 78% 66%, rgb(197 214 230 / 16%), transparent 34%);
     z-index: 0;
-    will-change: auto;
     pointer-events: none;
+}
+
+.memory-page__grain {
+    z-index: 0;
+    opacity: 0.06;
+    background-image:
+        linear-gradient(rgb(100 116 139 / 10%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(100 116 139 / 10%) 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: radial-gradient(circle at center, black, transparent 90%);
+}
+
+.hero-card,
+.shell-card,
+.story-card,
+.discussion-panel,
+.action-bar {
+    position: relative;
+    z-index: 4;
+    width: min(100%, 1120px);
+    max-width: 100%;
+    margin-inline: auto;
+}
+
+.hero-card {
+    padding: 1.1rem 1rem 1.05rem;
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgb(255 255 255 / 95%), rgb(246 249 252 / 92%));
+    border: 1px solid rgb(148 163 184 / 26%);
+    box-shadow:
+        0 14px 38px rgb(15 23 42 / 12%),
+        inset 0 1px 0 rgb(255 255 255 / 70%);
+    backdrop-filter: blur(10px);
+}
+
+.hero-card__eyebrow,
+.section-kicker {
+    margin: 0;
+    color: #475569;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.hero-card__title,
+.section-title {
+    margin: 0.35rem 0 0;
+    color: #0f172a;
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+}
+
+.hero-card__title {
+    font-family: "Noto Serif TC", "PMingLiU", serif;
+    font-size: clamp(1.55rem, 7vw, 2.7rem);
+    max-width: 14ch;
+}
+
+.hero-card__description {
+    margin: 0.75rem 0 0;
+    color: rgb(51 65 85 / 86%);
+    line-height: 1.76;
+    font-size: 0.95rem;
+}
+
+.hero-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-top: 1rem;
+}
+
+.hero-stat {
+    padding: 0.75rem 0.8rem;
+    border-radius: 18px;
+    background: rgb(255 255 255 / 78%);
+    border: 1px solid rgb(148 163 184 / 24%);
+}
+
+.hero-stat__label {
+    display: block;
+    font-size: 0.72rem;
+    color: rgb(100 116 139 / 74%);
+    letter-spacing: 0.08em;
+}
+
+.hero-stat__value {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.hero-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+    margin-top: 1rem;
+}
+
+.hero-action,
+.hero-action--secondary {
+    border: none;
+    border-radius: 999px;
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        filter 0.2s ease,
+        background-color 0.2s ease;
+}
+
+.hero-action {
+    color: #f8fafc;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.hero-action--secondary {
+    color: #0f172a;
+    background: rgb(255 255 255 / 92%);
+    border: 1px solid rgb(148 163 184 / 26%);
+}
+
+.hero-action:hover,
+.hero-action--secondary:hover,
+.action-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
 }
 
 .game-arena {
     position: relative;
     z-index: 4;
-    width: min(100%, 980px);
     display: grid;
-    gap: 0.9rem;
+    gap: 0.85rem;
     grid-template-columns: 1fr;
 }
 
-.game-hud {
-    background: rgb(11 16 35 / 78%);
-    border: 1px solid rgb(126 180 255 / 46%);
-    border-radius: 14px;
-    padding: 0.7rem 0.9rem;
-    box-shadow: 0 10px 30px rgb(0 0 0 / 30%);
+.shell-card {
+    border-radius: 22px;
+    padding: 1rem;
+    background: linear-gradient(180deg, rgb(255 255 255 / 96%), rgb(246 249 252 / 92%));
+    border: 1px solid rgb(148 163 184 / 20%);
+    box-shadow: 0 14px 32px rgb(15 23 42 / 10%);
+    backdrop-filter: blur(10px);
 }
 
-.game-hud__label {
-    margin: 0;
-    font-size: 0.8rem;
-    color: rgb(193 214 255 / 90%);
+.progress-head,
+.section-head,
+.photo-stage__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
 }
 
-.game-hud__value {
-    margin: 0.3rem 0 0.5rem;
-    font-size: 1rem;
-    font-weight: 700;
+.section-head--compact {
+    margin-bottom: 0.4rem;
 }
 
-.game-hud__bar {
-    width: 100%;
-    height: 8px;
+.section-title {
+    font-size: clamp(1.05rem, 4.2vw, 1.4rem);
+    max-width: 18ch;
+}
+
+.progress-pill,
+.photo-stage__badge,
+.photo-stage__seen,
+.photo-card__rarity {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.9rem;
     border-radius: 999px;
-    background: rgb(255 255 255 / 12%);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.progress-pill {
+    padding: 0.35rem 0.7rem;
+    color: #0f172a;
+    background: rgb(241 245 249 / 96%);
+    border: 1px solid rgb(148 163 184 / 34%);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 0.72rem;
+    margin-top: 0.95rem;
+    border-radius: 999px;
+    background: rgb(148 163 184 / 24%);
     overflow: hidden;
 }
 
-.game-hud__bar-fill {
+.progress-bar__fill {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, #64d2ff, #ffd06b);
+    background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 100%);
     border-radius: inherit;
     transition: width 0.4s ease;
 }
 
-.achievement-strip {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    border-radius: 10px;
-    background: rgb(255 255 255 / 6%);
-    border: 1px solid rgb(255 255 255 / 12%);
-    overflow: hidden;
-    transition: background-color 0.3s ease;
+.shell-card--story-grid {
+    display: grid;
+    gap: 0.75rem;
 }
 
-.achievement-toggle-btn {
+.insight-card {
+    border-radius: 18px;
+    padding: 0.85rem;
+    background: rgb(255 255 255 / 90%);
+    border: 1px solid rgb(148 163 184 / 20%);
+}
+
+.insight-card--daily {
+    background: linear-gradient(180deg, rgb(255 255 255 / 94%), rgb(243 247 251 / 90%));
+}
+
+.insight-card--stages {
+    background: linear-gradient(180deg, rgb(248 250 253 / 94%), rgb(238 244 250 / 90%));
+}
+
+.daily-task__item {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.65rem 0.8rem;
-    border: none;
-    background: transparent;
-    color: rgb(233 242 255 / 88%);
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
-    letter-spacing: 0.03em;
-    transition: background-color 0.3s ease;
-    user-select: none;
+    gap: 0.7rem;
+    padding: 0.8rem;
+    border-radius: 16px;
+    background: rgb(255 255 255 / 88%);
+    border: 1px solid rgb(148 163 184 / 22%);
 }
 
-.achievement-toggle-btn:hover {
-    background: rgb(255 255 255 / 8%);
+.daily-task__item--empty {
+    background: rgb(248 250 253 / 84%);
 }
 
-.achievement-toggle-icon {
+.daily-task__emoji {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    font-size: 0.75rem;
-    transition: transform 0.3s ease;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 12px;
+    background: rgb(30 41 59 / 10%);
+    font-size: 1.15rem;
+    flex-shrink: 0;
 }
 
-.achievement-toggle-text {
-    flex: 1;
+.daily-task__text {
+    line-height: 1.55;
+    font-size: 0.92rem;
+    color: #334155;
 }
 
-.achievement-progress {
-    font-size: 0.8rem;
-    color: rgb(233 242 255 / 65%);
-    background: rgb(100 210 255 / 20%);
-    padding: 0.2rem 0.5rem;
-    border-radius: 999px;
-}
-
-.achievement-content {
+.stage-list {
     display: grid;
-    gap: 0.6rem;
-    padding: 0 0.8rem 0.8rem;
-    animation: slideDown 0.3s ease-out;
+    gap: 0.5rem;
 }
 
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.achievement-item {
-    display: flex;
-    gap: 0.7rem;
-    padding: 0.65rem 0.8rem;
-    border-radius: 10px;
-    background: rgb(255 255 255 / 8%);
-    border: 1px solid rgb(255 255 255 / 16%);
-    opacity: 0.65;
-    transition:
-        opacity 0.3s ease,
-        border-color 0.3s ease,
-        background-color 0.3s ease;
-}
-
-.achievement-item--unlocked {
-    opacity: 1;
-    background: rgb(255 208 143 / 22%);
-    border-color: rgb(255 208 143 / 50%);
-}
-
-.achievement-badge {
-    font-size: 1.8rem;
+.stage-item {
     display: flex;
     align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    height: 44px;
-    background: rgb(100 210 255 / 16%);
-    border-radius: 8px;
+    gap: 0.55rem;
+    padding: 0.7rem 0.75rem;
+    border-radius: 16px;
+    background: rgb(255 255 255 / 88%);
+    border: 1px solid rgb(148 163 184 / 22%);
+    opacity: 0.78;
 }
 
-.achievement-item--unlocked .achievement-badge {
-    background: rgb(255 208 143 / 35%);
+.stage-item--completed {
+    opacity: 1;
+    background: rgb(237 246 255 / 98%);
+    border-color: rgb(56 189 248 / 34%);
 }
 
-.achievement-info {
-    display: flex;
-    flex-direction: column;
+.stage-item__star {
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
+    width: 1.75rem;
+    flex-shrink: 0;
+}
+
+.stage-item__name {
     flex: 1;
-    min-width: 0;
-}
-
-.achievement-name {
-    margin: 0;
-    font-size: 0.92rem;
+    font-size: 0.88rem;
     font-weight: 600;
-    color: rgb(255 249 245 / 95%);
+    color: #1e293b;
 }
 
-.achievement-desc {
-    margin: 0.2rem 0 0;
-    font-size: 0.8rem;
-    color: rgb(233 242 255 / 75%);
-}
-
-.achievement-item--unlocked .achievement-name {
-    color: #ffeecc;
+.stage-item__progress {
+    font-size: 0.78rem;
+    color: rgb(71 85 105 / 78%);
+    font-weight: 700;
+    min-width: 2.2rem;
+    text-align: right;
 }
 
 .photo-card__badge {
-    display: inline-block;
-    margin-right: 0.4rem;
-    color: #64d2ff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    padding: 0 0.55rem;
+    color: #2563eb;
     font-weight: 700;
 }
 
 .photo-card__rarity {
-    display: inline-block;
-    margin-right: 0.5rem;
-    padding: 0.15rem 0.4rem;
-    border-radius: 3px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    background: rgb(255 255 255 / 12%);
-    color: #ddd;
+    padding: 0 0.55rem;
+    margin-right: 0.45rem;
+    background: rgb(241 245 249 / 96%);
+    color: #1e293b;
 }
 
 .photo-card {
     margin: 0;
-    background: #0f162e;
-    border-radius: 12px;
+    background: linear-gradient(180deg, rgb(255 255 255 / 100%), rgb(244 248 252 / 100%));
+    border-radius: 22px;
     overflow: hidden;
-    border: 2px solid rgb(255 255 255 / 12%);
+    border: 1px solid rgb(148 163 184 / 22%);
     transition:
-        border-color 0.3s ease,
-        box-shadow 0.3s ease;
+        border-color 0.25s ease,
+        box-shadow 0.25s ease;
 }
 
 .photo-card--rare {
-    border-color: rgb(255 182 89 / 80%);
+    border-color: rgb(14 165 233 / 62%);
     box-shadow:
-        0 0 12px rgb(255 182 89 / 25%),
-        inset 0 0 8px rgb(255 182 89 / 10%);
+        0 0 16px rgb(14 165 233 / 16%),
+        inset 0 0 10px rgb(14 165 233 / 8%);
 }
 
 .photo-card--legendary {
-    border-color: rgb(255 208 143 / 100%);
+    border-color: rgb(37 99 235 / 72%);
     box-shadow:
-        0 0 16px rgb(255 208 143 / 40%),
-        0 0 32px rgb(255 182 89 / 20%),
-        inset 0 0 10px rgb(255 208 143 / 15%);
+        0 0 20px rgb(37 99 235 / 20%),
+        0 0 36px rgb(14 165 233 / 10%),
+        inset 0 0 10px rgb(37 99 235 / 8%);
 }
 
 .photo-card__container {
     overflow: hidden;
-    background: #070b1a;
+    background: linear-gradient(180deg, rgb(255 255 255 / 100%), rgb(241 245 249 / 100%));
     touch-action: manipulation;
+    max-height: min(74vh, 42rem);
 }
 
 .photo-card__video {
     width: 100%;
     height: auto;
-    aspect-ratio: 4 / 5;
-    object-fit: cover !important;
+    aspect-ratio: auto;
+    object-fit: contain !important;
 }
 
 .photo-card__video::cue {
@@ -1168,29 +1358,81 @@ onBeforeUnmount(() => {
     font-size: 0.9rem;
 }
 
-.game-photo-zone {
-    background: rgb(8 12 28 / 84%);
-    border: 1px solid rgb(255 255 255 / 16%);
-    border-radius: 16px;
-    padding: 0.6rem;
-    contain: layout style paint;
-    will-change: auto;
+.photo-stage {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgb(255 255 255 / 96%), rgb(245 249 252 / 92%));
+    border: 1px solid rgb(148 163 184 / 24%);
+    box-shadow:
+        0 18px 42px rgb(15 23 42 / 12%),
+        inset 0 1px 0 rgb(255 255 255 / 65%);
+}
+
+.photo-stage .section-title {
+    color: #111827;
+}
+
+.photo-stage__meta {
     display: flex;
-    flex-direction: column;
     gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 100%;
+}
+
+.photo-stage__curation {
+    display: inline-flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-right: auto;
+}
+
+.curation-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.8rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    color: #1f2937;
+    background: rgb(233 242 252 / 92%);
+    border: 1px solid rgb(59 130 246 / 24%);
+}
+
+.curation-chip--muted {
+    color: #475569;
+    background: rgb(241 245 249 / 96%);
+    border-color: rgb(148 163 184 / 28%);
+}
+
+.photo-stage__badge {
+    padding: 0.35rem 0.7rem;
+    color: #1e293b;
+    background: rgb(241 245 249 / 96%);
+    border: 1px solid rgb(148 163 184 / 34%);
+}
+
+.photo-stage__seen {
+    padding: 0.35rem 0.7rem;
+    color: #184333;
+    background: rgb(222 245 232 / 88%);
+    border: 1px solid rgb(86 155 126 / 30%);
 }
 
 .photo-controls-hint {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.6rem;
-    background: rgb(100 210 255 / 8%);
-    border: 1px solid rgb(100 210 255 / 25%);
-    border-radius: 8px;
-    font-size: 0.8rem;
-    color: rgb(100 210 255 / 85%);
+    gap: 0.45rem;
+    padding: 0.55rem 0.7rem;
+    background: rgb(255 255 255 / 92%);
+    border: 1px solid rgb(148 163 184 / 30%);
+    border-radius: 14px;
+    font-size: 0.78rem;
+    color: #475569;
     flex-wrap: wrap;
 }
 
@@ -1202,8 +1444,8 @@ onBeforeUnmount(() => {
 }
 
 .hint-item kbd {
-    background: rgb(100 210 255 / 20%);
-    border: 1px solid rgb(100 210 255 / 40%);
+    background: rgb(14 165 233 / 12%);
+    border: 1px solid rgb(14 165 233 / 36%);
     border-radius: 4px;
     padding: 0.2rem 0.4rem;
     font-family: monospace;
@@ -1212,65 +1454,89 @@ onBeforeUnmount(() => {
 }
 
 .hint-divider {
-    color: rgb(100 210 255 / 40%);
+    color: rgb(100 116 139 / 52%);
     margin: 0 0.2rem;
-}
-
-@media (max-width: 560px) {
-    .photo-controls-hint {
-        font-size: 0.75rem;
-        gap: 0.3rem;
-        padding: 0.35rem 0.5rem;
-    }
-
-    .hint-item kbd {
-        padding: 0.15rem 0.3rem;
-        font-size: 0.7rem;
-    }
 }
 
 .photo-card__image {
     display: block;
     width: 100%;
-    aspect-ratio: 4 / 5;
+    height: auto;
+    aspect-ratio: auto;
+    max-height: min(68vh, 46rem);
     object-fit: contain;
-    background: #070b1a;
+    background: #f8fafc;
     user-select: none;
     touch-action: manipulation;
     -webkit-user-select: none;
+    filter: saturate(1.08) contrast(1.05) brightness(1.03);
 }
 
 .photo-card__caption {
     margin: 0;
-    padding: 0.5rem 0.75rem 0.6rem;
-    font-size: 0.84rem;
-    color: rgb(233 242 255 / 92%);
+    padding: 0.7rem 0.85rem 0.8rem;
+    font-size: 0.85rem;
+    color: #334155;
     letter-spacing: 0.03em;
+    background: rgb(248 250 252 / 92%);
 }
 
-.photo-pop-enter-active,
-.photo-pop-leave-active {
-    transition: opacity 0.22s ease;
+.photo-swipe-left-enter-active,
+.photo-swipe-left-leave-active,
+.photo-swipe-right-enter-active,
+.photo-swipe-right-leave-active,
+.photo-swipe-up-enter-active,
+.photo-swipe-up-leave-active {
+    transition:
+        opacity 0.28s ease,
+        transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.photo-pop-enter-from,
-.photo-pop-leave-to {
+.photo-swipe-left-enter-from {
     opacity: 0;
+    transform: translateX(18%) scale(0.98);
+}
+
+.photo-swipe-left-leave-to {
+    opacity: 0;
+    transform: translateX(-18%) scale(0.98);
+}
+
+.photo-swipe-right-enter-from {
+    opacity: 0;
+    transform: translateX(-18%) scale(0.98);
+}
+
+.photo-swipe-right-leave-to {
+    opacity: 0;
+    transform: translateX(18%) scale(0.98);
+}
+
+.photo-swipe-up-enter-from {
+    opacity: 0;
+    transform: translateY(18%) scale(0.97) rotate(-1deg);
+}
+
+.photo-swipe-up-leave-to {
+    opacity: 0;
+    transform: translateY(-14%) scale(0.97) rotate(1deg);
 }
 
 .story-card {
     position: relative;
     z-index: 6;
     width: 100%;
-    padding: 1rem 0.9rem 1.1rem;
-    border-radius: 10px;
-    background: #fbf5ea;
-    color: #2c211e;
-    border: 6px solid #fff;
-    box-shadow: 0 14px 34px rgb(0 0 0 / 38%);
+    padding: 1rem 0.95rem 1.05rem;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #ffffff 0%, #f4f7fb 100%);
+    color: #1f2937;
+    border: 1px solid rgb(148 163 184 / 24%);
+    box-shadow: 0 16px 36px rgb(15 23 42 / 12%);
     cursor: pointer;
-    transition: max-height 0.3s ease;
-    max-height: 280px;
+    transition:
+        transform 0.2s ease,
+        max-height 0.3s ease;
+    max-height: 18rem;
     overflow: hidden;
 }
 
@@ -1283,31 +1549,32 @@ onBeforeUnmount(() => {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(165deg, rgb(255 255 255 / 30%), transparent 40%);
+    background: linear-gradient(165deg, rgb(255 255 255 / 52%), transparent 45%);
 }
 
 .story-card__stage {
     margin: 0;
-    font-size: 0.82rem;
-    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #91502d;
+    color: #64748b;
 }
 
 .story-card__title {
     margin: 0.65rem 0 0;
-    font-size: clamp(1.45rem, 2.7vw, 2.15rem);
-    line-height: 1.24;
+    font-size: clamp(1.35rem, 5vw, 2.15rem);
+    line-height: 1.18;
     font-weight: 700;
 }
 
 .story-card__quote {
     margin: 0.85rem 0 0;
-    padding: 0.35rem 0.9rem;
-    border-left: 4px solid #c8784f;
-    font-size: clamp(0.98rem, 2.1vw, 1.16rem);
-    color: #5b3f30;
-    background: rgb(255 255 255 / 52%);
+    padding: 0.7rem 0.9rem;
+    border-left: 4px solid #0ea5e9;
+    border-radius: 0 14px 14px 0;
+    font-size: clamp(0.98rem, 2.1vw, 1.08rem);
+    color: #334155;
+    background: rgb(241 245 249 / 82%);
 }
 
 .story-card__text {
@@ -1325,7 +1592,7 @@ onBeforeUnmount(() => {
     padding-top: 0.75rem;
     border-top: 1px solid rgb(0 0 0 / 15%);
     font-size: 0.9rem;
-    color: #91502d;
+    color: #475569;
     font-weight: 600;
     user-select: none;
 }
@@ -1354,21 +1621,23 @@ onBeforeUnmount(() => {
 }
 
 .chapter-subtitle {
-    position: absolute;
-    top: 0.8rem;
+    position: sticky;
+    top: 0.6rem;
     left: 50%;
     transform: translateX(-50%);
     z-index: 8;
-    background: rgb(6 9 18 / 68%);
-    border: 1px solid rgb(255 243 220 / 34%);
+    width: fit-content;
+    background: rgb(255 255 255 / 82%);
+    border: 1px solid rgb(148 163 184 / 30%);
     border-radius: 999px;
-    padding: 0.45rem 1.1rem;
+    padding: 0.45rem 1rem;
+    backdrop-filter: blur(14px);
 }
 
 .chapter-subtitle__text {
     margin: 0;
     letter-spacing: 0.05em;
-    color: #fff3d7;
+    color: #1e293b;
     font-size: 0.96rem;
 }
 
@@ -1387,24 +1656,24 @@ onBeforeUnmount(() => {
 
 .timeline {
     z-index: 6;
-    background: rgb(11 17 35 / 70%);
-    border: 1px solid rgb(255 255 255 / 16%);
-    border-radius: 16px;
-    padding: 0.7rem;
+    background: transparent;
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
+    padding: 0.1rem 0 0.2rem;
+    scroll-snap-type: x proximity;
 }
 
 .timeline__item {
-    border: 0;
-    border-bottom: 2px solid rgb(255 255 255 / 20%);
-    background: rgb(255 255 255 / 9%);
-    color: rgb(239 245 255 / 88%);
-    border-radius: 10px 10px 0 0;
-    padding: 0.5rem 0.7rem;
+    border: 1px solid rgb(148 163 184 / 28%);
+    background: rgb(255 255 255 / 90%);
+    color: #334155;
+    border-radius: 999px;
+    padding: 0.55rem 0.8rem;
     cursor: pointer;
+    flex: 0 0 auto;
     white-space: nowrap;
+    scroll-snap-align: start;
     transition:
         transform 0.28s ease,
         border-color 0.28s ease,
@@ -1416,51 +1685,61 @@ onBeforeUnmount(() => {
 }
 
 .timeline__item--active {
-    border-bottom-color: #ffd08f;
-    background: rgb(255 194 128 / 30%);
-    color: #fff9ea;
+    border-color: rgb(14 165 233 / 44%);
+    background: rgb(232 244 255 / 96%);
+    color: #0f172a;
 }
 
 .action-bar {
-    z-index: 6;
-    background: rgb(10 16 34 / 75%);
-    border: 1px solid rgb(255 255 255 / 16%);
-    border-radius: 16px;
-    padding: 0.75rem;
+    z-index: 8;
+    position: sticky;
+    bottom: calc(0.7rem + env(safe-area-inset-bottom));
+    background: rgb(255 255 255 / 88%);
+    border: 1px solid rgb(148 163 184 / 28%);
+    border-radius: 22px;
+    padding: 0.85rem;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
     justify-content: center;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 16px 34px rgb(15 23 42 / 14%);
 }
 
 .action-btn {
     border: 0;
     border-radius: 999px;
-    padding: 0.55rem 0.95rem;
-    background: #ffe7b2;
-    color: #4a331f;
+    padding: 0.75rem 1rem;
+    background: #ffffff;
+    color: #1f2937;
     cursor: pointer;
     font-weight: 600;
     white-space: nowrap;
     transition:
         transform 0.24s ease,
         filter 0.24s ease;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.05);
+    min-height: 2.8rem;
 }
 
 .action-btn--ghost {
-    background: rgb(255 255 255 / 13%);
-    color: #fff6e6;
-    border: 1px solid rgb(255 255 255 / 35%);
+    background: rgb(248 250 252 / 92%);
+    color: #334155;
+    border: 1px solid rgb(148 163 184 / 28%);
 }
 
-.action-btn--random {
-    background: linear-gradient(135deg, #71d3ff, #8ef6d3);
-    color: #11303a;
+.action-btn--pass {
+    background: linear-gradient(135deg, #e5e7eb 0%, #cbd5e1 100%);
+    color: #0f172a;
+}
+
+.action-btn--like {
+    background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+    color: #0b1324;
+}
+
+.action-btn--superlike {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #e2e8f0;
 }
 
 .action-btn--small {
@@ -1468,160 +1747,55 @@ onBeforeUnmount(() => {
     font-size: 0.85rem;
 }
 
-.daily-task-panel {
-    background: rgb(11 16 35 / 70%);
-    border: 1px solid rgb(100 210 255 / 40%);
-    border-radius: 14px;
-    padding: 0.65rem 0.85rem;
-}
-
-.daily-task__title {
-    margin: 0 0 0.5rem;
-    font-size: 0.88rem;
-    font-weight: 700;
-    color: #64d2ff;
-    letter-spacing: 0.05em;
-}
-
-.daily-task__item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 0.55rem;
-    border-radius: 8px;
-    background: rgb(100 210 255 / 12%);
-    border: 1px solid rgb(100 210 255 / 30%);
-}
-
-.daily-task__item--empty {
-    background: rgb(255 255 255 / 8%);
-    border-color: rgb(255 255 255 / 20%);
-}
-
-.daily-task__emoji {
-    font-size: 1.2rem;
-    min-width: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.daily-task__text {
-    font-size: 0.82rem;
-    color: rgb(233 242 255 / 88%);
-    line-height: 1.3;
-}
-
-.stage-completion-panel {
-    background: rgb(11 16 35 / 70%);
-    border: 1px solid rgb(255 208 143 / 40%);
-    border-radius: 14px;
-    padding: 0.65rem 0.85rem;
-}
-
-.stage-completion__title {
-    margin: 0 0 0.5rem;
-    font-size: 0.88rem;
-    font-weight: 700;
-    color: #ffd08f;
-    letter-spacing: 0.05em;
-}
-
-.stage-completion__list {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    gap: 0.4rem;
-}
-
-.stage-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 0.6rem;
-    border-radius: 8px;
-    background: rgb(255 255 255 / 8%);
-    border: 1px solid rgb(255 208 143 / 25%);
-    transition:
-        background-color 0.3s ease,
-        border-color 0.3s ease;
-    opacity: 0.7;
-}
-
-.stage-item--completed {
-    opacity: 1;
-    background: rgb(255 208 143 / 25%);
-    border-color: rgb(255 208 143 / 60%);
-}
-
-.stage-item__star {
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 24px;
-}
-
-.stage-item__name {
-    flex: 1;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: rgb(255 249 245 / 90%);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.stage-item__progress {
-    font-size: 0.75rem;
-    color: rgb(233 242 255 / 75%);
-    font-weight: 600;
-    min-width: 32px;
-    text-align: right;
-}
-
-.stage-item--completed .stage-item__name {
-    color: #ffeecc;
-}
-
 .discussion-panel {
     position: relative;
     z-index: 6;
-    width: min(100%, 980px);
-    max-height: min(50vh, 500px);
-    margin: 0 auto;
-    border-radius: 18px;
-    padding: 0.75rem;
-    background: rgb(7 10 22 / 66%);
-    border: 1px solid rgb(255 231 196 / 24%);
+    border-radius: 22px;
+    padding: 0.95rem;
+    background: linear-gradient(180deg, rgb(255 255 255 / 96%), rgb(245 249 252 / 92%));
+    border: 1px solid rgb(148 163 184 / 24%);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 22rem;
 }
 
 .discussion-panel__head {
-    padding: 0.3rem 0.6rem 0.65rem;
+    padding: 0.1rem 0.2rem 0.8rem;
 }
 
 .discussion-panel__title {
     margin: 0;
-    color: #fff2d3;
-    font-size: 1rem;
+    color: #111827;
+    font-size: 1.05rem;
 }
 
 .discussion-panel__desc {
     margin: 0.35rem 0 0.75rem;
-    color: rgb(255 239 218 / 78%);
+    color: rgb(71 85 105 / 82%);
     font-size: 0.9rem;
 }
 
 .discussion-panel__content {
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: auto;
-    background: rgb(5 8 17 / 36%);
+    background: rgb(255 255 255 / 90%);
     flex: 1;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
+}
+
+.photo-swipe-left-enter-active,
+.photo-swipe-left-leave-active,
+.photo-swipe-right-enter-active,
+.photo-swipe-right-leave-active,
+.photo-swipe-up-enter-active,
+.photo-swipe-up-leave-active,
+.story-expand-enter-active,
+.story-expand-leave-active,
+.chapter-subtitle-enter-active,
+.chapter-subtitle-leave-active {
+    transition: opacity 0.28s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1634,56 +1808,128 @@ onBeforeUnmount(() => {
     }
 }
 
-@keyframes drift {
-    from {
-        opacity: 0.85;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@media (max-width: 900px) {
-    .memory-page {
-        padding: 4rem 0.8rem 6rem;
-    }
-
-    .discussion-panel {
-        width: 100%;
-        max-height: 50vh;
-    }
-
-    .stage-completion__list {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
 @media (max-width: 560px) {
-    .action-btn {
-        width: calc(50% - 0.35rem);
-        min-width: 130px;
+    .memory-page {
+        padding-top: 0.85rem;
+        padding-left: calc(0.72rem + env(safe-area-inset-left));
+        padding-right: calc(1.02rem + env(safe-area-inset-right));
+        padding-bottom: calc(8rem + env(safe-area-inset-bottom));
     }
 
-    .discussion-panel {
-        max-height: 45vh;
+    .hero-card__title {
+        max-width: 12ch;
+    }
+
+    .shell-card--story-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-btn {
+        width: calc(50% - 0.25rem);
+        min-width: 0;
+        font-size: 0.92rem;
+    }
+
+    .timeline {
+        padding-bottom: 0.1rem;
+        scrollbar-width: none;
+    }
+
+    .timeline::-webkit-scrollbar {
+        display: none;
+    }
+
+    .photo-stage__head {
+        flex-wrap: wrap;
+    }
+
+    .photo-stage__meta {
+        width: 100%;
+        justify-content: flex-start;
     }
 
     .photo-card__image {
-        aspect-ratio: 3 / 4;
+        max-height: 56vh;
+        object-fit: contain;
+        filter: saturate(1.04) contrast(1.04) brightness(1.02);
     }
 
-    .achievement-content {
-        grid-template-columns: 1fr;
+    .photo-card__container {
+        max-height: none;
     }
 
-    .stage-completion__list {
-        grid-template-columns: 1fr;
+    .discussion-panel {
+        min-height: 18rem;
+    }
+}
+
+@media (min-width: 720px) {
+    .memory-page {
+        padding: 1.25rem 1rem 4rem;
+        gap: 1rem;
     }
 
-    .stage-completion__title,
-    .daily-task__title {
-        font-size: 0.88rem;
+    .hero-card {
+        padding: 1.35rem 1.4rem;
+    }
+
+    .hero-stats {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .hero-actions {
+        grid-template-columns: repeat(2, max-content);
+        justify-content: start;
+    }
+
+    .shell-card {
+        padding: 1.1rem;
+    }
+
+    .shell-card--story-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .photo-stage {
+        padding: 1.1rem;
+    }
+
+    .photo-card__image {
+        max-height: min(70vh, 52rem);
+        object-fit: contain;
+        filter: saturate(1.06) contrast(1.05) brightness(1.02);
+    }
+
+    .story-card {
+        padding: 1.1rem 1.1rem 1.15rem;
+    }
+
+    .action-bar {
+        position: static;
+    }
+
+    .discussion-panel {
+        min-height: 26rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .memory-page {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding-bottom: 4.5rem;
+    }
+
+    .hero-card__title {
+        max-width: 16ch;
+    }
+
+    .shell-card--story-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .photo-stage {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 </style>
