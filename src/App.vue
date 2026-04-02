@@ -1350,6 +1350,11 @@ onBeforeUnmount(() => {
     background: #f8fafc;
 }
 
+.photo-card__image.photo-card__video {
+    filter: none;
+    background: #f8fafc;
+}
+
 .photo-card__video::cue {
     background: rgba(0, 0, 0, 0.5);
 }
@@ -1858,6 +1863,12 @@ onBeforeUnmount(() => {
         max-height: 56vh;
         object-fit: contain;
         filter: saturate(1.04) contrast(1.04) brightness(1.02);
+    }
+
+    .photo-card__video {
+        background: #020617;
+        filter: saturate(1.14) contrast(1.12) brightness(1.02);
+        box-shadow: inset 0 0 0 1px rgb(148 163 184 / 18%);
     }
 
     .photo-card__container {
