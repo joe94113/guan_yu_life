@@ -238,6 +238,7 @@ const isStoryExpanded = ref(false);
 const photoZoneRef = ref<HTMLElement | null>(null);
 const photoTransitionName = ref("photo-swipe-left");
 const isVideoPlaying = ref(false);
+const isIosSafari = ref(false);
 
 let autoPlayTimer: ReturnType<typeof globalThis.setInterval> | null = null;
 let subtitleTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
@@ -257,6 +258,12 @@ const activeSlide = computed<SlideItem>(() => slides[activeIndex.value] ?? fallb
 const activeStage = computed(() => activeSlide.value.stage);
 const activeSlideNumber = computed(() => activeIndex.value + 1);
 const activeRarityLabel = computed(() => activeSlide.value.rarity || "常見");
+const activeTransitionName = computed(() => {
+    if (isIosSafari.value && activeSlide.value.mediaType === "video") {
+        return "photo-fade";
+    }
+    return photoTransitionName.value;
+});
 const curatorLabelsByStage: Record<LifeStage, { era: string; theme: string }> = {
     小孩時期: { era: "童年檔案", theme: "溫度與陪伴" },
     大學: { era: "青春檔案", theme: "探索與自我" },
@@ -629,6 +636,9 @@ const toggleMusic = async (): Promise<void> => {
 };
 
 onMounted(async () => {
+    const ua = navigator.userAgent || "";
+    isIosSafari.value = /iP(hone|ad|od)/.test(ua) && /WebKit/.test(ua) && !/CriOS|FxiOS/.test(ua);
+
     loadViewedHistory();
     loadDailyDraw();
     markCurrentAsViewed();
@@ -807,13 +817,14 @@ onBeforeUnmount(() => {
                 <span class="hint-item">✨ 上滑超級喜歡</span>
             </div>
 
-            <transition :name="photoTransitionName" mode="out-in">
+            <transition :name="activeTransitionName" mode="out-in">
                 <figure
                     :key="activeSlide.id"
                     class="photo-card"
                     :class="{
                         'photo-card--rare': activeSlide.rarity === '稀有',
                         'photo-card--legendary': activeSlide.rarity === '傳說',
+                        'photo-card--ios-video': isIosSafari && activeSlide.mediaType === 'video',
                     }"
                 >
                     <div class="photo-card__container">
@@ -833,8 +844,8 @@ onBeforeUnmount(() => {
                             :aria-describedby="`photo-caption-${activeSlide.id}`"
                             :title="activeSlide.title"
                             preload="metadata"
-                            playsinline
-                            webkit-playsinline="true"
+                            :playsinline="!isIosSafari"
+                            :webkit-playsinline="!isIosSafari ? 'true' : undefined"
                             controls
                             controlsList="nodownload"
                             @play="handleVideoPlay"
@@ -1334,6 +1345,11 @@ onBeforeUnmount(() => {
         inset 0 0 10px rgb(37 99 235 / 8%);
 }
 
+.photo-card--ios-video {
+    box-shadow: none;
+    border-color: rgb(148 163 184 / 22%);
+}
+
 .photo-card__container {
     overflow: hidden;
     background: linear-gradient(180deg, rgb(255 255 255 / 100%), rgb(241 245 249 / 100%));
@@ -1531,6 +1547,16 @@ onBeforeUnmount(() => {
 .photo-swipe-up-leave-to {
     opacity: 0;
     transform: translateY(-14%) scale(0.97) rotate(1deg);
+}
+
+.photo-fade-enter-active,
+.photo-fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.photo-fade-enter-from,
+.photo-fade-leave-to {
+    opacity: 0;
 }
 
 .story-card {
@@ -1868,6 +1894,9 @@ onBeforeUnmount(() => {
     .photo-card__video {
         background: #020617;
         box-shadow: inset 0 0 0 1px rgb(148 163 184 / 18%);
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        will-change: auto;
     }
 
     .photo-card__container {
