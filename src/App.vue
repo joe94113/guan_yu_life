@@ -289,6 +289,7 @@ let lfo: OscillatorNode | null = null;
 let lfoGain: GainNode | null = null;
 let touchStartX = 0;
 let touchStartY = 0;
+const preloadedMedia = new Set<string>();
 
 const activeSlide = computed<SlideItem>(() => slides[activeIndex.value] ?? fallbackSlide);
 const activeStage = computed(() => activeSlide.value.stage);
@@ -359,6 +360,37 @@ const nextSlide = (): void => {
 const prevSlide = (): void => {
     activeIndex.value = (activeIndex.value - 1 + slides.length) % slides.length;
     markCurrentAsViewed();
+};
+
+const preloadMediaAtIndex = (index: number): void => {
+    const target = slides[index];
+    if (!target || preloadedMedia.has(target.image)) {
+        return;
+    }
+
+    preloadedMedia.add(target.image);
+
+    if (target.mediaType === "video") {
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        video.src = target.image;
+        return;
+    }
+
+    const image = new Image();
+    image.decoding = "async";
+    image.src = target.image;
+};
+
+const preloadNearbySlides = (centerIndex: number): void => {
+    const nearby = [
+        centerIndex,
+        (centerIndex + 1) % slides.length,
+        (centerIndex - 1 + slides.length) % slides.length,
+        (centerIndex + 2) % slides.length,
+    ];
+
+    nearby.forEach((index) => preloadMediaAtIndex(index));
 };
 
 const focusPhotoZone = async (): Promise<void> => {
@@ -595,6 +627,7 @@ onMounted(async () => {
     loadViewedHistory();
     loadDailyDraw();
     markCurrentAsViewed();
+    preloadNearbySlides(activeIndex.value);
     startAutoPlay();
     showChapterSubtitle();
     await createAmbientAudio();
@@ -607,6 +640,7 @@ onMounted(async () => {
 watch(activeIndex, () => {
     showChapterSubtitle();
     isStoryExpanded.value = false;
+    preloadNearbySlides(activeIndex.value);
 });
 
 onBeforeUnmount(() => {
@@ -742,12 +776,17 @@ onBeforeUnmount(() => {
                                 :src="activeSlide.image"
                                 :alt="activeSlide.title"
                                 class="photo-card__image"
+                                loading="eager"
+                                decoding="async"
+                                fetchpriority="high"
                             />
                             <video
                                 v-else
                                 :src="activeSlide.image"
                                 type="video/mp4"
                                 class="photo-card__image photo-card__video"
+                                preload="metadata"
+                                playsinline
                                 controls
                                 controlsList="nodownload"
                             ></video>
@@ -899,7 +938,6 @@ onBeforeUnmount(() => {
     border: 1px solid rgb(126 180 255 / 46%);
     border-radius: 14px;
     padding: 0.7rem 0.9rem;
-    backdrop-filter: blur(8px);
     box-shadow: 0 10px 30px rgb(0 0 0 / 30%);
 }
 
@@ -1105,24 +1143,6 @@ onBeforeUnmount(() => {
         0 0 16px rgb(255 208 143 / 40%),
         0 0 32px rgb(255 182 89 / 20%),
         inset 0 0 10px rgb(255 208 143 / 15%);
-    animation: legendary-glow 2.4s ease-in-out infinite;
-}
-
-@keyframes legendary-glow {
-    0%,
-    100% {
-        box-shadow:
-            0 0 16px rgb(255 208 143 / 40%),
-            0 0 32px rgb(255 182 89 / 20%),
-            inset 0 0 10px rgb(255 208 143 / 15%);
-    }
-
-    50% {
-        box-shadow:
-            0 0 20px rgb(255 208 143 / 60%),
-            0 0 40px rgb(255 182 89 / 30%),
-            inset 0 0 12px rgb(255 208 143 / 25%);
-    }
 }
 
 .photo-card__container {
@@ -1230,15 +1250,12 @@ onBeforeUnmount(() => {
 
 .photo-pop-enter-active,
 .photo-pop-leave-active {
-    transition:
-        opacity 0.35s ease,
-        transform 0.35s ease;
+    transition: opacity 0.22s ease;
 }
 
 .photo-pop-enter-from,
 .photo-pop-leave-to {
     opacity: 0;
-    transform: scale(0.96);
 }
 
 .story-card {
@@ -1346,7 +1363,6 @@ onBeforeUnmount(() => {
     border: 1px solid rgb(255 243 220 / 34%);
     border-radius: 999px;
     padding: 0.45rem 1.1rem;
-    backdrop-filter: blur(6px);
 }
 
 .chapter-subtitle__text {
@@ -1375,7 +1391,6 @@ onBeforeUnmount(() => {
     border: 1px solid rgb(255 255 255 / 16%);
     border-radius: 16px;
     padding: 0.7rem;
-    backdrop-filter: blur(8px);
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
@@ -1412,7 +1427,6 @@ onBeforeUnmount(() => {
     border: 1px solid rgb(255 255 255 / 16%);
     border-radius: 16px;
     padding: 0.75rem;
-    backdrop-filter: blur(8px);
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -1459,7 +1473,6 @@ onBeforeUnmount(() => {
     border: 1px solid rgb(100 210 255 / 40%);
     border-radius: 14px;
     padding: 0.65rem 0.85rem;
-    backdrop-filter: blur(8px);
 }
 
 .daily-task__title {
@@ -1505,7 +1518,6 @@ onBeforeUnmount(() => {
     border: 1px solid rgb(255 208 143 / 40%);
     border-radius: 14px;
     padding: 0.65rem 0.85rem;
-    backdrop-filter: blur(8px);
 }
 
 .stage-completion__title {
@@ -1582,7 +1594,6 @@ onBeforeUnmount(() => {
     padding: 0.75rem;
     background: rgb(7 10 22 / 66%);
     border: 1px solid rgb(255 231 196 / 24%);
-    backdrop-filter: blur(8px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1611,6 +1622,16 @@ onBeforeUnmount(() => {
     flex: 1;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 @keyframes drift {
