@@ -258,6 +258,28 @@ const activeSlide = computed<SlideItem>(() => slides[activeIndex.value] ?? fallb
 const activeStage = computed(() => activeSlide.value.stage);
 const activeSlideNumber = computed(() => activeIndex.value + 1);
 const activeRarityLabel = computed(() => activeSlide.value.rarity || "常見");
+const iosVideoFallbackMap: Record<string, string> = {
+    "college-10": asset("assets/images/college/6.jpg"),
+};
+const renderedSlide = computed<SlideItem>(() => {
+    const slide = activeSlide.value;
+    if (!isIosSafari.value || slide.mediaType !== "video") {
+        return slide;
+    }
+
+    const fallbackImage = iosVideoFallbackMap[slide.id];
+    if (!fallbackImage) {
+        return slide;
+    }
+
+    return {
+        ...slide,
+        mediaType: "image",
+        image: fallbackImage,
+        captionTrack: undefined,
+        descriptionTrack: undefined,
+    };
+});
 const activeTransitionName = computed(() => {
     if (isIosSafari.value && activeSlide.value.mediaType === "video") {
         return "photo-fade";
@@ -829,9 +851,9 @@ onBeforeUnmount(() => {
                 >
                     <div class="photo-card__container">
                         <img
-                            v-if="!activeSlide.mediaType || activeSlide.mediaType === 'image'"
-                            :src="activeSlide.image"
-                            :alt="activeSlide.title"
+                            v-if="!renderedSlide.mediaType || renderedSlide.mediaType === 'image'"
+                            :src="renderedSlide.image"
+                            :alt="renderedSlide.title"
                             class="photo-card__image"
                             loading="eager"
                             decoding="async"
@@ -840,9 +862,9 @@ onBeforeUnmount(() => {
                         <video
                             v-else
                             class="photo-card__image photo-card__video"
-                            :aria-label="`影片：${activeSlide.title}`"
-                            :aria-describedby="`photo-caption-${activeSlide.id}`"
-                            :title="activeSlide.title"
+                            :aria-label="`影片：${renderedSlide.title}`"
+                            :aria-describedby="`photo-caption-${renderedSlide.id}`"
+                            :title="renderedSlide.title"
                             preload="metadata"
                             :playsinline="!isIosSafari"
                             :webkit-playsinline="!isIosSafari ? 'true' : undefined"
@@ -852,29 +874,42 @@ onBeforeUnmount(() => {
                             @pause="handleVideoPause"
                             @ended="handleVideoPause"
                         >
-                            <source :src="activeSlide.image" type="video/mp4" />
+                            <source :src="renderedSlide.image" type="video/mp4" />
                             <track
-                                v-if="activeSlide.captionTrack"
+                                v-if="renderedSlide.captionTrack"
                                 kind="captions"
-                                :src="activeSlide.captionTrack"
+                                :src="renderedSlide.captionTrack"
                                 srclang="zh"
                                 label="中文字幕"
                                 default
                             />
                             <track
-                                v-if="activeSlide.descriptionTrack"
+                                v-if="renderedSlide.descriptionTrack"
                                 kind="descriptions"
-                                :src="activeSlide.descriptionTrack"
+                                :src="renderedSlide.descriptionTrack"
                                 srclang="zh"
                                 label="中文描述"
                             />
                         </video>
                     </div>
-                    <figcaption :id="`photo-caption-${activeSlide.id}`" class="photo-card__caption">
+                    <figcaption
+                        :id="`photo-caption-${renderedSlide.id}`"
+                        class="photo-card__caption"
+                    >
                         <span v-if="isCurrentViewed" class="photo-card__badge">✓</span>
                         <span class="photo-card__rarity">{{ activeRarityLabel }}</span>
                         <span
-                            v-if="activeSlide.mediaType === 'video'"
+                            v-if="
+                                isIosSafari &&
+                                activeSlide.mediaType === 'video' &&
+                                renderedSlide.mediaType === 'image'
+                            "
+                            class="photo-card__media-fallback"
+                        >
+                            iOS 相容模式
+                        </span>
+                        <span
+                            v-if="renderedSlide.mediaType === 'video'"
                             class="photo-card__media-type"
                         >
                             🎬
