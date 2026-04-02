@@ -1346,6 +1346,8 @@ onBeforeUnmount(() => {
     height: auto;
     aspect-ratio: auto;
     object-fit: contain !important;
+    filter: none;
+    background: #f8fafc;
 }
 
 .photo-card__video::cue {
@@ -1469,6 +1471,10 @@ onBeforeUnmount(() => {
     user-select: none;
     touch-action: manipulation;
     -webkit-user-select: none;
+    filter: saturate(1.08) contrast(1.05) brightness(1.03);
+}
+
+.photo-card__image:not(.photo-card__video) {
     filter: saturate(1.08) contrast(1.05) brightness(1.03);
 }
 
