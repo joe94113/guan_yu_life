@@ -259,7 +259,9 @@ const activeStage = computed(() => activeSlide.value.stage);
 const activeSlideNumber = computed(() => activeIndex.value + 1);
 const activeRarityLabel = computed(() => activeSlide.value.rarity || "常見");
 const iosVideoFallbackMap: Record<string, string> = {
+    "college-9": asset("assets/images/college/8.jpg"),
     "college-10": asset("assets/images/college/6.jpg"),
+    "work-7": asset("assets/images/work/4.jpg"),
 };
 const renderedSlide = computed<SlideItem>(() => {
     const slide = activeSlide.value;
@@ -866,8 +868,8 @@ onBeforeUnmount(() => {
                             :aria-describedby="`photo-caption-${renderedSlide.id}`"
                             :title="renderedSlide.title"
                             preload="metadata"
-                            :playsinline="!isIosSafari"
-                            :webkit-playsinline="!isIosSafari ? 'true' : undefined"
+                            playsinline
+                            webkit-playsinline="true"
                             controls
                             controlsList="nodownload"
                             @play="handleVideoPlay"
